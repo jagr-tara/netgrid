@@ -107,7 +107,9 @@
                                 <% subnets.forEach(subnet => { %>
                                     <tr data-search-target="<%= (subnet.cidr + ' ' + (subnet.description || '') + ' ' + (subnet.vlan_name || '')).toLowerCase() %>">
                                         <td class="cell-cidr">
-                                            <span class="badge badge-cidr font-mono"><%= subnet.cidr %></span>
+                                            <a href="/ipam/subnets/<%= subnet.id %>" class="badge badge-cidr font-mono link-badge" title="Inspect subnet IP details and Space Map">
+                                                <%= subnet.cidr %>
+                                            </a>
                                         </td>
                                         <td class="cell-range">
                                             <span class="text-mono-sm">/<%= subnet.prefix_len %></span>
@@ -140,9 +142,12 @@
                                             </span>
                                         </td>
                                         <td class="cell-actions text-right">
-                                            <button type="button" class="btn-copy" data-copy="<%= subnet.cidr %>" title="Copy CIDR to clipboard">
-                                                Copy CIDR
-                                            </button>
+                                            <div class="actions-inline">
+                                                <a href="/ipam/subnets/<%= subnet.id %>" class="btn-table-link">Manage IPs</a>
+                                                <button type="button" class="btn-copy" data-copy="<%= subnet.cidr %>" title="Copy CIDR to clipboard">
+                                                    Copy
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 <% }) %>

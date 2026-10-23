@@ -1,0 +1,616 @@
+<%- include('partials/header') %>
+<%- include('partials/navbar') %>
+
+<main class="page-body">
+    <div class="container">
+        <!-- Breadcrumb & Top Bar -->
+        <div class="page-header">
+            <div>
+                <div class="breadcrumb">
+                    <a href="/">Infrastructure</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <a href="/ipam">IPAM</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span class="breadcrumb-current font-mono"><%= subnet.cidr %></span>
+                </div>
+                <h1 class="page-title"><%= subnet.cidr %></h1>
+                <p class="page-subtitle"><%= subnet.description && subnet.description.trim() ? subnet.description : 'Authoritative subnet CIDR prefix block' %></p>
+            </div>
+            <div class="header-actions">
+                <a href="/ipam" class="btn btn-secondary">
+                    &larr; Back to IPAM
+                </a>
+                <button type="button" class="btn btn-primary" id="open-assign-modal-btn">
+                    <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    <span>Assign IP Address</span>
+                </button>
+            </div>
+        </div>
+
+        <% if (query && query.success) { %>
+            <div class="alert alert-success" role="alert">
+                <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span><%= query.success === 'released' ? 'IP address successfully released from subnet.' : 'IP address allocation successfully committed.' %></span>
+            </div>
+        <% } %>
+
+        <% if (query && query.error) { %>
+            <div class="alert alert-danger" role="alert">
+                <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                <span><%= query.error %></span>
+            </div>
+        <% } %>
+
+        <!-- Subnet Metadata Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Network / Prefix</div>
+                <div class="stat-value font-mono-sub"><%= subnet.cidr %></div>
+                <div class="stat-desc">Mask Length: /<%= subnet.prefix_len %> (<%= spaceMap.totalSubnetIps %> total addresses)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Broadcast Address</div>
+                <div class="stat-value font-mono-sub"><%= subnet.broadcast_address || 'N/A' %></div>
+                <div class="stat-desc">Network Identifier: <%= subnet.host_address %></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Associated VLAN</div>
+                <div class="stat-value">
+                    <% if (subnet.vlan_tag) { %>
+                        VLAN <%= subnet.vlan_tag %>
+                    <% } else { %>
+                        Untagged
+                    <% } %>
+                </div>
+                <div class="stat-desc"><%= subnet.vlan_name || 'No 802.1Q layer-2 mapping' %></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Host Utilization</div>
+                <div class="stat-value"><%= spaceMap.utilizationPct %>%</div>
+                <div class="stat-desc"><%= spaceMap.allocatedCount %> allocated / <%= spaceMap.freeCount %> available</div>
+            </div>
+        </div>
+
+        <!-- Utilization Progress Bar -->
+        <div class="card mb-24">
+            <div class="card-body">
+                <div class="utilization-header">
+                    <div class="utilization-title">
+                        <span class="font-bold">Subnet Capacity:</span>
+                        <span><%= spaceMap.allocatedCount %> of <%= spaceMap.totalUsable %> usable host IPs allocated</span>
+                    </div>
+                    <span class="utilization-badge"><%= spaceMap.utilizationPct %>% Utilized</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="subnet-progress-fill" data-pct="<%= spaceMap.utilizationPct %>"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. Visual 'Space Map' Grid Layout -->
+        <div class="card mb-24">
+            <div class="card-header flex-between">
+                <div>
+                    <h2 class="card-title">Subnet Space Map</h2>
+                    <p class="card-subtitle">
+                        Interactive visual matrix of CIDR allocation density. Click any available cell to allocate that IP.
+                        <% if (spaceMap.totalBlocks > 1) { %>
+                            Showing block <strong class="font-mono"><%= spaceMap.currentBlockCidr %></strong> (<%= spaceMap.currentBlock + 1 %> of <%= spaceMap.totalBlocks %>).
+                        <% } %>
+                    </p>
+                </div>
+                <div class="space-map-controls">
+                    <% if (spaceMap.totalBlocks > 1) { %>
+                        <div class="block-selector">
+                            <label for="block-select" class="block-select-label">Block:</label>
+                            <select id="block-select" class="search-input" onchange="window.location.href='/ipam/subnets/<%= subnet.id %>?block=' + this.value">
+                                <% for (let b = 0; b < spaceMap.totalBlocks; b++) { %>
+                                    <option value="<%= b %>" <%= spaceMap.currentBlock === b ? 'selected' : '' %>>
+                                        Block <%= b %> (/24 chunk)
+                                    </option>
+                                <% } %>
+                            </select>
+                        </div>
+                    <% } %>
+                    <!-- Legend -->
+                    <div class="space-legend">
+                        <span class="legend-item"><span class="legend-box legend-free"></span> Available</span>
+                        <span class="legend-item"><span class="legend-box legend-used"></span> Allocated</span>
+                        <span class="legend-item"><span class="legend-box legend-reserved"></span> Reserved</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="space-map-grid" id="space-map-grid">
+                    <% spaceMap.cells.forEach(cell => { %>
+                        <button 
+                            type="button" 
+                            class="space-cell space-cell-<%= cell.type %>" 
+                            data-ip="<%= cell.ip %>"
+                            data-type="<%= cell.type %>"
+                            data-device="<%= (cell.data && cell.data.device_hostname) || '' %>"
+                            data-role="<%= (cell.data && cell.data.device_role) || '' %>"
+                            data-port="<%= (cell.data && cell.data.port_name) || '' %>"
+                            data-desc="<%= (cell.data && cell.data.description) || '' %>"
+                            title="<%= cell.ip %> (<%= cell.type === 'used' ? ((cell.data && cell.data.device_hostname) || cell.data && cell.data.description || 'Allocated') : (cell.type === 'free' ? 'Click to assign' : 'Reserved') %>)"
+                        >
+                            <span class="cell-octet"><%= cell.lastOctet %></span>
+                        </button>
+                    <% }) %>
+                </div>
+
+                <!-- Hover Details Bar -->
+                <div class="space-map-hover-bar" id="hover-details-bar">
+                    <span class="hover-label">Selected IP:</span>
+                    <span class="hover-value font-mono" id="hover-ip-display">Hover over a grid cell to inspect status</span>
+                    <span class="hover-meta" id="hover-meta-display"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Allocated IP Addresses Data Table -->
+        <div class="card">
+            <div class="card-header flex-between">
+                <div>
+                    <h2 class="card-title">Allocated IP Addresses</h2>
+                    <p class="card-subtitle">Authoritative host assignments registered under PostgreSQL <code>ip_addresses</code>.</p>
+                </div>
+                <div class="table-actions-group">
+                    <input type="text" id="ip-filter-input" class="search-input" placeholder="Filter by IP, device, port..." aria-label="Filter allocated IPs">
+                    <button type="button" class="btn btn-primary" id="table-assign-ip-btn">
+                        + Assign IP
+                    </button>
+                </div>
+            </div>
+
+            <div class="card-body no-padding">
+                <% if (allocatedIps.length === 0) { %>
+                    <div class="empty-state">
+                        <div class="empty-icon-wrap">
+                            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                        </div>
+                        <h3 class="empty-title">No Host IPs Allocated</h3>
+                        <p class="empty-desc">No host IP addresses have been bound to this subnet prefix yet. Assign an IP address manually or by clicking any available block in the Space Map.</p>
+                        <button type="button" class="btn btn-primary mt-16" id="empty-assign-ip-btn">
+                            + Assign First IP
+                        </button>
+                    </div>
+                <% } else { %>
+                    <div class="table-responsive">
+                        <table class="data-table" id="allocated-ips-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">IP Address</th>
+                                    <th scope="col">Device / Hostname</th>
+                                    <th scope="col">Interface / Port</th>
+                                    <th scope="col">Description</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col" class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% allocatedIps.forEach(ip => { %>
+                                    <tr id="ip-row-<%= ip.address.replace(/\./g, '-') %>" data-search-target="<%= (ip.address + ' ' + (ip.device_hostname || '') + ' ' + (ip.port_name || '') + ' ' + (ip.description || '')).toLowerCase() %>">
+                                        <td class="cell-cidr">
+                                            <span class="badge badge-cidr font-mono"><%= ip.address %></span>
+                                        </td>
+                                        <td class="cell-device">
+                                            <% if (ip.device_hostname) { %>
+                                                <div class="device-cell-group">
+                                                    <span class="font-bold"><%= ip.device_hostname %></span>
+                                                    <% if (ip.device_role) { %>
+                                                        <span class="badge badge-neutral text-sm"><%= ip.device_role %></span>
+                                                    <% } %>
+                                                </div>
+                                            <% } else { %>
+                                                <span class="text-muted text-sm">Standalone / Gateway</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="cell-port">
+                                            <% if (ip.port_name && ip.port_name.trim()) { %>
+                                                <span class="badge badge-neutral font-mono text-sm"><%= ip.port_name %></span>
+                                            <% } else { %>
+                                                <span class="text-muted text-sm">&mdash;</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="cell-description">
+                                            <% if (ip.description && ip.description.trim()) { %>
+                                                <span class="description-text"><%= ip.description %></span>
+                                            <% } else { %>
+                                                <span class="text-muted text-sm italic">No description</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="cell-status">
+                                            <span class="status-indicator">
+                                                <span class="status-dot"></span>
+                                                <span class="status-text">Active</span>
+                                            </span>
+                                        </td>
+                                        <td class="cell-actions text-right">
+                                            <div class="actions-inline">
+                                                <button type="button" class="btn-copy" data-copy="<%= ip.address %>" title="Copy IP">Copy</button>
+                                                <button type="button" class="btn-release" data-id="<%= ip.id %>" data-ip="<%= ip.address %>" title="Release IP Address">Release</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Assign IP Modal -->
+<div class="modal-backdrop" id="assign-ip-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modal-assign-title">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3 class="modal-title" id="modal-assign-title">Assign IP Address</h3>
+                    <p class="modal-subtitle">Subnet: <span class="font-mono"><%= subnet.cidr %></span></p>
+                </div>
+                <button type="button" class="modal-close-btn" id="close-assign-modal-x" aria-label="Close dialog">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="assign-ip-form" method="POST" action="/ipam/subnets/<%= subnet.id %>/ips" novalidate>
+                <div class="modal-body">
+                    <!-- Dynamic Alert Inside Modal -->
+                    <div class="alert alert-danger hidden" id="assign-modal-alert" role="alert">
+                        <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                        <span id="assign-modal-alert-text">Error message</span>
+                    </div>
+
+                    <!-- IP Address Field -->
+                    <div class="form-group">
+                        <label for="assign-address-input" class="form-label">
+                            IP Address <span class="required-asterisk">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="assign-address-input" 
+                            name="address" 
+                            class="form-control font-mono" 
+                            placeholder="e.g. 10.100.0.15" 
+                            required 
+                            autocomplete="off"
+                            spellcheck="false"
+                        >
+                        <p class="form-hint">Must belong within the <span class="font-mono"><%= subnet.cidr %></span> network block.</p>
+                    </div>
+
+                    <!-- Device Binding Select -->
+                    <div class="form-group">
+                        <label for="assign-device-select" class="form-label">
+                            Associated Device <span class="optional-tag">(Optional)</span>
+                        </label>
+                        <select id="assign-device-select" name="device_id" class="form-control">
+                            <option value="">None (Standalone / Gateway / External)</option>
+                            <% if (typeof devices !== 'undefined' && devices.length > 0) { %>
+                                <% devices.forEach(dev => { %>
+                                    <option value="<%= dev.id %>">
+                                        <%= dev.hostname %> <%= dev.device_role ? '(' + dev.device_role + ')' : '' %>
+                                    </option>
+                                <% }) %>
+                            <% } %>
+                        </select>
+                        <p class="form-hint">Bind this address to a known physical or virtual network device.</p>
+                    </div>
+
+                    <!-- Port / Interface Name -->
+                    <div class="form-group">
+                        <label for="assign-port-input" class="form-label">
+                            Interface / Port Name <span class="optional-tag">(Optional)</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="assign-port-input" 
+                            name="port_name" 
+                            class="form-control font-mono" 
+                            placeholder="e.g. eth0, gi0/1, mgmt0"
+                            maxlength="100"
+                        >
+                        <p class="form-hint">Device port or interface label carrying this address.</p>
+                    </div>
+
+                    <!-- Description Field -->
+                    <div class="form-group">
+                        <label for="assign-desc-input" class="form-label">
+                            Description / Context <span class="optional-tag">(Optional)</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="assign-desc-input" 
+                            name="description" 
+                            class="form-control" 
+                            placeholder="e.g. Primary Ingress VIP / Database Primary"
+                            maxlength="255"
+                        >
+                        <p class="form-hint">Operational notes or application workload context.</p>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="modal-assign-cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="modal-assign-submit-btn">
+                        <span class="btn-spinner hidden" id="modal-assign-spinner" aria-hidden="true"></span>
+                        <span id="modal-assign-submit-label">Commit Allocation</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const modal = document.getElementById('assign-ip-modal');
+        const openBtn = document.getElementById('open-assign-modal-btn');
+        const tableAssignBtn = document.getElementById('table-assign-ip-btn');
+        const emptyAssignBtn = document.getElementById('empty-assign-ip-btn');
+        const closeXBtn = document.getElementById('close-assign-modal-x');
+        const cancelBtn = document.getElementById('modal-assign-cancel-btn');
+        const form = document.getElementById('assign-ip-form');
+        const addressInput = document.getElementById('assign-address-input');
+        const alertBox = document.getElementById('assign-modal-alert');
+        const alertText = document.getElementById('assign-modal-alert-text');
+        const submitBtn = document.getElementById('modal-assign-submit-btn');
+        const submitLabel = document.getElementById('modal-assign-submit-label');
+        const spinner = document.getElementById('modal-assign-spinner');
+        const filterInput = document.getElementById('ip-filter-input');
+        const progressFill = document.getElementById('subnet-progress-fill');
+        if (progressFill) {
+            const pct = parseFloat(progressFill.getAttribute('data-pct')) || 0;
+            progressFill.style.width = Math.min(100, Math.max(0.5, pct)) + '%';
+        }
+
+        const hoverIp = document.getElementById('hover-ip-display');
+        const hoverMeta = document.getElementById('hover-meta-display');
+
+        function openModal(defaultIp = '') {
+            modal.classList.add('is-active');
+            modal.setAttribute('aria-hidden', 'false');
+            hideAlert();
+            form.reset();
+            if (defaultIp) {
+                addressInput.value = defaultIp;
+            }
+            setTimeout(() => {
+                if (defaultIp) {
+                    const descInput = document.getElementById('assign-desc-input');
+                    if (descInput) descInput.focus();
+                } else {
+                    addressInput.focus();
+                }
+            }, 50);
+        }
+
+        function closeModal() {
+            modal.classList.remove('is-active');
+            modal.setAttribute('aria-hidden', 'true');
+            hideAlert();
+            resetButtonState();
+        }
+
+        function showAlert(msg) {
+            alertText.textContent = msg;
+            alertBox.classList.remove('hidden');
+        }
+
+        function hideAlert() {
+            alertBox.classList.add('hidden');
+            alertText.textContent = '';
+        }
+
+        function setButtonLoading(loading) {
+            if (loading) {
+                submitBtn.disabled = true;
+                spinner.classList.remove('hidden');
+                submitLabel.textContent = 'Allocating...';
+            } else {
+                resetButtonState();
+            }
+        }
+
+        function resetButtonState() {
+            submitBtn.disabled = false;
+            spinner.classList.add('hidden');
+            submitLabel.textContent = 'Commit Allocation';
+        }
+
+        if (openBtn) openBtn.addEventListener('click', () => openModal());
+        if (tableAssignBtn) tableAssignBtn.addEventListener('click', () => openModal());
+        if (emptyAssignBtn) emptyAssignBtn.addEventListener('click', () => openModal());
+        if (closeXBtn) closeXBtn.addEventListener('click', closeModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('is-active')) {
+                closeModal();
+            }
+        });
+
+        // Form submission with Fetch API
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideAlert();
+
+            const ipVal = addressInput.value.trim();
+            if (!ipVal) {
+                showAlert('IP Address is required.');
+                addressInput.focus();
+                return;
+            }
+
+            setButtonLoading(true);
+
+            try {
+                const formData = new FormData(form);
+                const payload = {
+                    address: formData.get('address'),
+                    device_id: formData.get('device_id') || null,
+                    port_name: formData.get('port_name') || null,
+                    description: formData.get('description') || null,
+                };
+
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    window.location.href = window.location.pathname + '?success=1';
+                } else {
+                    showAlert(data.error || 'Server rejected IP allocation.');
+                    setButtonLoading(false);
+                }
+            } catch (err) {
+                console.error(err);
+                showAlert('Network error communicating with Netgrid server.');
+                setButtonLoading(false);
+            }
+        });
+
+        // Interactive Space Map Hover & Click Handling
+        const cells = document.querySelectorAll('.space-cell');
+        cells.forEach(cell => {
+            const ip = cell.getAttribute('data-ip');
+            const type = cell.getAttribute('data-type');
+            const device = cell.getAttribute('data-device');
+            const role = cell.getAttribute('data-role');
+            const port = cell.getAttribute('data-port');
+            const desc = cell.getAttribute('data-desc');
+
+            cell.addEventListener('mouseenter', () => {
+                if (hoverIp) hoverIp.textContent = ip;
+                if (hoverMeta) {
+                    if (type === 'used') {
+                        let meta = 'Allocated';
+                        if (device) meta += ' &bull; Host: ' + device + (role ? ' (' + role + ')' : '');
+                        if (port) meta += ' &bull; Port: ' + port;
+                        if (desc) meta += ' &bull; ' + desc;
+                        hoverMeta.innerHTML = meta;
+                    } else if (type === 'free') {
+                        hoverMeta.innerHTML = '<span class="text-success font-bold">Available</span> &bull; Click to assign';
+                    } else if (type === 'network') {
+                        hoverMeta.innerHTML = '<span class="text-muted">Reserved: Network Identifier</span>';
+                    } else if (type === 'broadcast') {
+                        hoverMeta.innerHTML = '<span class="text-muted">Reserved: Broadcast Address</span>';
+                    }
+                }
+            });
+
+            cell.addEventListener('click', () => {
+                if (type === 'free') {
+                    openModal(ip);
+                } else if (type === 'used') {
+                    const rowId = 'ip-row-' + ip.replace(/\./g, '-');
+                    const targetRow = document.getElementById(rowId);
+                    if (targetRow) {
+                        targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetRow.classList.add('row-highlight');
+                        setTimeout(() => targetRow.classList.remove('row-highlight'), 2000);
+                    }
+                }
+            });
+        });
+
+        // Filter allocated IPs table
+        if (filterInput) {
+            filterInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const rows = document.querySelectorAll('#allocated-ips-table tbody tr');
+                rows.forEach(row => {
+                    const searchTarget = row.getAttribute('data-search-target') || '';
+                    if (searchTarget.includes(term)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Release IP Button Action
+        document.querySelectorAll('.btn-release').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const ipId = btn.getAttribute('data-id');
+                const ipAddr = btn.getAttribute('data-ip');
+                if (!confirm(`Are you sure you want to release ${ipAddr}? This will delete the host allocation record.`)) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/ipam/subnets/<%= subnet.id %>/ips/${ipId}/delete`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                        },
+                    });
+                    const resData = await response.json();
+                    if (response.ok && resData.success) {
+                        window.location.href = '/ipam/subnets/<%= subnet.id %>?success=released';
+                    } else {
+                        alert(resData.error || 'Failed to release IP.');
+                    }
+                } catch (err) {
+                    console.error('Release failed:', err);
+                    alert('Network error releasing IP.');
+                }
+            });
+        });
+
+        // Copy button
+        document.querySelectorAll('.btn-copy').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const copyText = btn.getAttribute('data-copy');
+                if (copyText) {
+                    try {
+                        await navigator.clipboard.writeText(copyText);
+                        const original = btn.textContent;
+                        btn.textContent = 'Copied!';
+                        btn.classList.add('copied');
+                        setTimeout(() => {
+                            btn.textContent = original;
+                            btn.classList.remove('copied');
+                        }, 1800);
+                    } catch (err) {
+                        console.error('Copy failed:', err);
+                    }
+                }
+            });
+        });
+    });
+</script>
+
+<%- include('partials/footer') %>
