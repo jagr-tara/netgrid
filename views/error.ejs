@@ -1,0 +1,18 @@
+<%- include('partials/header') %>
+<%- include('partials/navbar') %>
+
+<main class="page-body">
+    <div class="container">
+        <div class="error-card">
+            <div class="error-badge">Error</div>
+            <h1 class="error-title"><%= typeof title !== 'undefined' ? title : 'An Error Occurred' %></h1>
+            <p class="error-message"><%= typeof message !== 'undefined' ? message : 'An unexpected server error occurred.' %></p>
+            <div class="error-actions">
+                <a href="/ipam" class="btn btn-primary">Return to IPAM</a>
+                <a href="/" class="btn btn-secondary">Go to Dashboard</a>
+            </div>
+        </div>
+    </div>
+</main>
+
+<%- include('partials/footer') %>

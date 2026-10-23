@@ -1,0 +1,421 @@
+<%- include('partials/header') %>
+<%- include('partials/navbar') %>
+
+<main class="page-body">
+    <div class="container">
+        <!-- Breadcrumb & Top Bar -->
+        <div class="page-header">
+            <div>
+                <div class="breadcrumb">
+                    <a href="/">Infrastructure</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span class="breadcrumb-current">IPAM</span>
+                </div>
+                <h1 class="page-title">IP Address Management (IPAM)</h1>
+                <p class="page-subtitle">Authoritative subnet prefix registry, CIDR allocations, and VLAN mappings.</p>
+            </div>
+            <div class="header-actions">
+                <button type="button" class="btn btn-primary" id="open-subnet-modal-btn">
+                    <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    <span>Add Subnet</span>
+                </button>
+            </div>
+        </div>
+
+        <% if (query && query.success) { %>
+            <div class="alert alert-success" role="alert">
+                <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span>Subnet prefix successfully created and committed to the database.</span>
+            </div>
+        <% } %>
+
+        <% if (query && query.error) { %>
+            <div class="alert alert-danger" role="alert">
+                <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                <span><%= query.error %></span>
+            </div>
+        <% } %>
+
+        <!-- Metrics Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Subnets</div>
+                <div class="stat-value"><%= subnets.length %></div>
+                <div class="stat-desc">Authoritative CIDR blocks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">VLAN Mapped</div>
+                <div class="stat-value"><%= subnets.filter(s => s.vlan_id).length %></div>
+                <div class="stat-desc">Segmented broadcast domains</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Host IPs</div>
+                <div class="stat-value"><%= subnets.reduce((acc, s) => acc + (s.ip_count || 0), 0) %></div>
+                <div class="stat-desc">Active IP address allocations</div>
+            </div>
+        </div>
+
+        <!-- Subnets Data Table Card -->
+        <div class="card mt-24">
+            <div class="card-header flex-between">
+                <div>
+                    <h2 class="card-title">Configured Subnets</h2>
+                    <p class="card-subtitle">Authoritative networks stored in PostgreSQL <code>subnets</code> relation.</p>
+                </div>
+                <div class="table-search-box">
+                    <input type="text" id="subnet-filter-input" class="search-input" placeholder="Filter by CIDR, description..." aria-label="Filter subnets">
+                </div>
+            </div>
+
+            <div class="card-body no-padding">
+                <% if (subnets.length === 0) { %>
+                    <div class="empty-state">
+                        <div class="empty-icon-wrap">
+                            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                                <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                                <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                                <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                            </svg>
+                        </div>
+                        <h3 class="empty-title">No Subnets Configured</h3>
+                        <p class="empty-desc">Your database currently has 0 subnet records. Declare your first CIDR prefix to initialize the IPAM inventory.</p>
+                        <button type="button" class="btn btn-primary mt-16" id="empty-add-subnet-btn">
+                            + Add First Subnet
+                        </button>
+                    </div>
+                <% } else { %>
+                    <div class="table-responsive">
+                        <table class="data-table" id="subnets-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">CIDR Network</th>
+                                    <th scope="col">Prefix / Range</th>
+                                    <th scope="col">Description</th>
+                                    <th scope="col">Associated VLAN</th>
+                                    <th scope="col">Allocated Hosts</th>
+                                    <th scope="col" class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% subnets.forEach(subnet => { %>
+                                    <tr data-search-target="<%= (subnet.cidr + ' ' + (subnet.description || '') + ' ' + (subnet.vlan_name || '')).toLowerCase() %>">
+                                        <td class="cell-cidr">
+                                            <span class="badge badge-cidr font-mono"><%= subnet.cidr %></span>
+                                        </td>
+                                        <td class="cell-range">
+                                            <span class="text-mono-sm">/<%= subnet.prefix_len %></span>
+                                            <% if (subnet.broadcast_address) { %>
+                                                <span class="text-muted text-sm ml-8" title="Broadcast Address">&rarr; <%= subnet.broadcast_address %></span>
+                                            <% } %>
+                                        </td>
+                                        <td class="cell-description">
+                                            <% if (subnet.description && subnet.description.trim()) { %>
+                                                <span class="description-text"><%= subnet.description %></span>
+                                            <% } else { %>
+                                                <span class="text-muted text-sm italic">No description provided</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="cell-vlan">
+                                            <% if (subnet.vlan_tag) { %>
+                                                <span class="badge badge-vlan">
+                                                    VLAN <%= subnet.vlan_tag %>
+                                                    <% if (subnet.vlan_name) { %>
+                                                        <span class="badge-subtext">&bull; <%= subnet.vlan_name %></span>
+                                                    <% } %>
+                                                </span>
+                                            <% } else { %>
+                                                <span class="text-muted text-sm">Unassigned</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="cell-hosts">
+                                            <span class="badge <%= subnet.ip_count > 0 ? 'badge-info' : 'badge-neutral' %> font-mono">
+                                                <%= subnet.ip_count %> <%= subnet.ip_count === 1 ? 'host' : 'hosts' %>
+                                            </span>
+                                        </td>
+                                        <td class="cell-actions text-right">
+                                            <button type="button" class="btn-copy" data-copy="<%= subnet.cidr %>" title="Copy CIDR to clipboard">
+                                                Copy CIDR
+                                            </button>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Add Subnet Modal -->
+<div class="modal-backdrop" id="subnet-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3 class="modal-title" id="modal-title">Add New Subnet</h3>
+                    <p class="modal-subtitle">Declare an authoritative CIDR prefix in Netgrid NSoT.</p>
+                </div>
+                <button type="button" class="modal-close-btn" id="close-modal-x" aria-label="Close dialog">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="add-subnet-form" method="POST" action="/ipam" novalidate>
+                <div class="modal-body">
+                    <!-- Dynamic Alert inside modal -->
+                    <div class="alert alert-danger hidden" id="modal-alert" role="alert">
+                        <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                        <span id="modal-alert-text">Error message</span>
+                    </div>
+
+                    <!-- CIDR Network Input -->
+                    <div class="form-group">
+                        <label for="subnet-network" class="form-label">
+                            CIDR Network Prefix <span class="required-asterisk">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="subnet-network" 
+                            name="network" 
+                            class="form-control font-mono" 
+                            placeholder="e.g. 192.168.10.0/24 or 10.0.0.0/16" 
+                            required 
+                            autocomplete="off"
+                            spellcheck="false"
+                        >
+                        <p class="form-hint">
+                            Must be valid CIDR network notation with host bits set to 0. Supported: IPv4 (/0 - /32) and IPv6 (/0 - /128).
+                        </p>
+                    </div>
+
+                    <!-- Description Input -->
+                    <div class="form-group">
+                        <label for="subnet-description" class="form-label">
+                            Description
+                        </label>
+                        <input 
+                            type="text" 
+                            id="subnet-description" 
+                            name="description" 
+                            class="form-control" 
+                            placeholder="e.g. Primary Datacenter LAN / Production Servers"
+                            maxlength="255"
+                        >
+                        <p class="form-hint">Operational context, scope, or facility location.</p>
+                    </div>
+
+                    <!-- VLAN Mapping Select -->
+                    <div class="form-group">
+                        <label for="subnet-vlan" class="form-label">
+                            Associated VLAN <span class="optional-tag">(Optional)</span>
+                        </label>
+                        <select id="subnet-vlan" name="vlan_id" class="form-control">
+                            <option value="">None (Untagged / Unassigned)</option>
+                            <% if (typeof vlans !== 'undefined' && vlans.length > 0) { %>
+                                <% vlans.forEach(vlan => { %>
+                                    <option value="<%= vlan.id %>">
+                                        VLAN <%= vlan.tag %> &mdash; <%= vlan.name %>
+                                    </option>
+                                <% }) %>
+                            <% } %>
+                        </select>
+                        <p class="form-hint">Associates this subnet with an existing 802.1Q layer 2 broadcast domain.</p>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="modal-cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="modal-submit-btn">
+                        <span class="btn-spinner hidden" id="modal-spinner" aria-hidden="true"></span>
+                        <span id="modal-submit-label">Create Subnet</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const modal = document.getElementById('subnet-modal');
+        const openBtn = document.getElementById('open-subnet-modal-btn');
+        const emptyAddBtn = document.getElementById('empty-add-subnet-btn');
+        const closeXBtn = document.getElementById('close-modal-x');
+        const cancelBtn = document.getElementById('modal-cancel-btn');
+        const form = document.getElementById('add-subnet-form');
+        const networkInput = document.getElementById('subnet-network');
+        const alertBox = document.getElementById('modal-alert');
+        const alertText = document.getElementById('modal-alert-text');
+        const submitBtn = document.getElementById('modal-submit-btn');
+        const submitLabel = document.getElementById('modal-submit-label');
+        const spinner = document.getElementById('modal-spinner');
+        const filterInput = document.getElementById('subnet-filter-input');
+
+        function openModal() {
+            modal.classList.add('is-active');
+            modal.setAttribute('aria-hidden', 'false');
+            hideAlert();
+            form.reset();
+            setTimeout(() => networkInput.focus(), 50);
+        }
+
+        function closeModal() {
+            modal.classList.remove('is-active');
+            modal.setAttribute('aria-hidden', 'true');
+            hideAlert();
+            resetButtonState();
+        }
+
+        function showAlert(msg) {
+            alertText.textContent = msg;
+            alertBox.classList.remove('hidden');
+        }
+
+        function hideAlert() {
+            alertBox.classList.add('hidden');
+            alertText.textContent = '';
+        }
+
+        function setButtonLoading(loading) {
+            if (loading) {
+                submitBtn.disabled = true;
+                spinner.classList.remove('hidden');
+                submitLabel.textContent = 'Saving...';
+            } else {
+                resetButtonState();
+            }
+        }
+
+        function resetButtonState() {
+            submitBtn.disabled = false;
+            spinner.classList.add('hidden');
+            submitLabel.textContent = 'Create Subnet';
+        }
+
+        if (openBtn) openBtn.addEventListener('click', openModal);
+        if (emptyAddBtn) emptyAddBtn.addEventListener('click', openModal);
+        if (closeXBtn) closeXBtn.addEventListener('click', closeModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+        // Backdrop click to close
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Escape key to close
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('is-active')) {
+                closeModal();
+            }
+        });
+
+        // Form Submission with asynchronous Fetch API & Visual State
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideAlert();
+
+            const networkVal = networkInput.value.trim();
+            if (!networkVal) {
+                showAlert('Network CIDR is required (e.g. 10.0.0.0/24).');
+                networkInput.focus();
+                return;
+            }
+
+            // Quick client-side check for CIDR format
+            if (!networkVal.includes('/')) {
+                showAlert('Please include prefix length (e.g., /24 or /16).');
+                networkInput.focus();
+                return;
+            }
+
+            setButtonLoading(true);
+
+            try {
+                const formData = new FormData(form);
+                const payload = {
+                    network: formData.get('network'),
+                    description: formData.get('description'),
+                    vlan_id: formData.get('vlan_id') || null,
+                };
+
+                const response = await fetch('/ipam', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Smooth reload to show updated database data
+                    window.location.href = '/ipam?success=1';
+                } else {
+                    showAlert(data.error || 'Server rejected subnet record.');
+                    setButtonLoading(false);
+                }
+            } catch (err) {
+                console.error(err);
+                showAlert('Network error communicating with Netgrid server.');
+                setButtonLoading(false);
+            }
+        });
+
+        // Client-side quick filter
+        if (filterInput) {
+            filterInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const rows = document.querySelectorAll('#subnets-table tbody tr');
+                rows.forEach(row => {
+                    const searchTarget = row.getAttribute('data-search-target') || '';
+                    if (searchTarget.includes(term)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Copy CIDR button
+        document.querySelectorAll('.btn-copy').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const cidr = btn.getAttribute('data-copy');
+                if (cidr) {
+                    try {
+                        await navigator.clipboard.writeText(cidr);
+                        const original = btn.textContent;
+                        btn.textContent = 'Copied!';
+                        btn.classList.add('copied');
+                        setTimeout(() => {
+                            btn.textContent = original;
+                            btn.classList.remove('copied');
+                        }, 1800);
+                    } catch (err) {
+                        console.error('Copy failed:', err);
+                    }
+                }
+            });
+        });
+    });
+</script>
+
+<%- include('partials/footer') %>

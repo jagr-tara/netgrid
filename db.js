@@ -7,11 +7,13 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
-pool.on('error', (err, client) => {
+pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
-  process.exit(-1);
 });
 
 module.exports = pool;

@@ -1,29 +1,79 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Netgrid NSoT</title>
-    <link rel="stylesheet" href="/css/style.css">
-</head>
-<body>
+<%- include('partials/header') %>
+<%- include('partials/navbar') %>
+
+<main class="page-body">
     <div class="container">
-        <h1>Netgrid Infrastructure</h1>
-        <div class="status-card">
-            <strong>System Status:</strong> Framework Initialized<br>
-            <strong>Database Time (Local):</strong> <span id="local-time" data-utc="<%= dbTime.toISOString() %>">Calculating...</span>
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Netgrid Infrastructure</h1>
+                <p class="page-subtitle">Authoritative Network Source of Truth & IP Address Management</p>
+            </div>
+            <div class="header-actions">
+                <a href="/ipam" class="btn btn-primary">Open IPAM Module</a>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">System State</div>
+                <div class="stat-value">Active</div>
+                <div class="stat-desc">Framework Initialized & Connected</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Database Time</div>
+                <div class="stat-value font-mono-sub" id="local-time" data-utc="<%= dbTime.toISOString() %>">Synchronizing...</div>
+                <div class="stat-desc">Host PostgreSQL 15 System Clock</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">RAM Footprint Constraint</div>
+                <div class="stat-value">3,072 MB</div>
+                <div class="stat-desc">Max threshold: 2,850 MB</div>
+            </div>
+        </div>
+
+        <div class="card mt-24">
+            <div class="card-header">
+                <h2 class="card-title">Available NSoT Modules</h2>
+            </div>
+            <div class="card-body">
+                <div class="modules-grid">
+                    <a href="/ipam" class="module-card">
+                        <div class="module-title">IPAM (Subnets & IP Addresses)</div>
+                        <div class="module-desc">Manage CIDR prefixes, subnets, and host IP address allocations with validation.</div>
+                        <span class="module-link">Go to IPAM &rarr;</span>
+                    </a>
+                    <div class="module-card disabled">
+                        <div class="module-title">VLAN Inventory</div>
+                        <div class="module-desc">802.1Q VLAN IDs, naming, layer 2 segment assignments.</div>
+                        <span class="module-badge">Upcoming</span>
+                    </div>
+                    <div class="module-card disabled">
+                        <div class="module-title">Device Registry</div>
+                        <div class="module-desc">Routers, switches, firewalls, and interface telemetry.</div>
+                        <span class="module-badge">Upcoming</span>
+                    </div>
+                    <div class="module-card disabled">
+                        <div class="module-title">Topology Graph</div>
+                        <div class="module-desc">Interactive layer 2/3 visual topology mapping engine.</div>
+                        <span class="module-badge">Upcoming</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+</main>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const timeEl = document.getElementById('local-time');
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const timeEl = document.getElementById('local-time');
+        if (timeEl) {
             const utcDate = new Date(timeEl.getAttribute('data-utc'));
             timeEl.textContent = new Intl.DateTimeFormat('default', {
-                dateStyle: 'full', 
-                timeStyle: 'long'
+                dateStyle: 'medium', 
+                timeStyle: 'medium'
             }).format(utcDate);
-        });
-    </script>
-</body>
-</html>
+        }
+    });
+</script>
+
+<%- include('partials/footer') %>
