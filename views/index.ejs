@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netgrid NSoT</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Netgrid Infrastructure</h1>
+        <div class="status-card">
+            <strong>System Status:</strong> Framework Initialized<br>
+            <strong>Database Time (Local):</strong> <span id="local-time" data-utc="<%= dbTime.toISOString() %>">Calculating...</span>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const timeEl = document.getElementById('local-time');
+            const utcDate = new Date(timeEl.getAttribute('data-utc'));
+            timeEl.textContent = new Intl.DateTimeFormat('default', {
+                dateStyle: 'full', 
+                timeStyle: 'long'
+            }).format(utcDate);
+        });
+    </script>
+</body>
+</html>
