@@ -21,6 +21,9 @@ app.use('/vlans', vlansRouter);
 const devicesRouter = require('./routes/devices');
 app.use('/devices', devicesRouter);
 
+const topologyRouter = require('./routes/topology');
+app.use('/topology', topologyRouter);
+
 app.get('/', async (req, res) => {
   try {
     const result = await db.query('SELECT NOW()');

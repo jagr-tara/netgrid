@@ -1,0 +1,654 @@
+<%- include('partials/header') %>
+<%- include('partials/navbar') %>
+
+<main class="page-body">
+    <div class="container">
+        <!-- Breadcrumb & Top Bar -->
+        <div class="page-header">
+            <div>
+                <div class="breadcrumb">
+                    <a href="/">Infrastructure</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span class="breadcrumb-current">Topology</span>
+                </div>
+                <h1 class="page-title">Dynamic Topology Graph</h1>
+                <p class="page-subtitle">Interactive client-side canvas visualizing hardware nodes, subnets, and active interface IP interconnects.</p>
+            </div>
+            <div class="header-actions">
+                <div class="table-meta-pills" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <div class="pill-chip" title="Hardware Devices Registered">
+                        <span class="status-dot" style="background: #0F1115;"></span>
+                        <span>Devices: <strong id="top-metric-devices"><%= metrics ? metrics.devices : 0 %></strong></span>
+                    </div>
+                    <div class="pill-chip" title="IP Subnets Allocated">
+                        <span class="status-dot" style="background: #0F5144;"></span>
+                        <span>Subnets: <strong id="top-metric-subnets"><%= metrics ? metrics.subnets : 0 %></strong></span>
+                    </div>
+                    <div class="pill-chip" title="Interface IP Interconnects">
+                        <span class="status-dot status-dot-emerald"></span>
+                        <span>Links: <strong id="top-metric-links"><%= metrics ? metrics.links : 0 %></strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Topology Workspace Grid -->
+        <div class="topology-grid">
+            <!-- Left: Interactive Canvas Card -->
+            <div class="card topology-canvas-card">
+                <div class="card-header flex-between">
+                    <div>
+                        <h2 class="card-title">Network Canvas Viewport</h2>
+                        <p class="card-subtitle">Force-directed relational graph powered by vis-network canvas engine</p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-topology" title="Re-fetch Relational Schema">
+                            <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                            </svg>
+                            <span>Refresh</span>
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-fit-view" title="Zoom to Fit Canvas">
+                            <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l3.293 3.293a1 1 0 01-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 11-2 0V6.414l-3.293 3.293a1 1 0 11-1.414-1.414L13.586 5H12zm-3.293 9.293a1 1 0 011.414 1.414L6.414 19H8a1 1 0 110 2H4a1 1 0 01-1-1v-4a1 1 0 112 0v1.586l3.293-3.293zm7.586 0a1 1 0 011.414 0l3.293 3.293V16a1 1 0 112 0v4a1 1 0 01-1 1h-4a1 1 0 110-2h1.586l-3.293-3.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                            <span>Fit</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card-body no-padding">
+                    <div class="topology-viewport-wrap">
+                        <!-- Dedicated vis-network Canvas Mounting Element -->
+                        <div id="topology-canvas-viewport" class="topology-canvas-viewport"></div>
+
+                        <!-- Floating Controls Overlay -->
+                        <div class="topology-floating-controls" aria-label="Graph Navigation Controls">
+                            <button type="button" class="topology-ctrl-btn" id="ctrl-zoom-in" title="Zoom In (+)">
+                                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                            <button type="button" class="topology-ctrl-btn" id="ctrl-zoom-out" title="Zoom Out (-)">
+                                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                            <span class="topology-ctrl-divider"></span>
+                            <button type="button" class="topology-ctrl-btn active" id="ctrl-toggle-physics" title="Toggle Layout Physics Simulation">
+                                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                            <span class="topology-ctrl-divider"></span>
+                            <input type="text" id="topology-search-input" class="topology-filter-input" placeholder="Search node..." autocomplete="off">
+                        </div>
+
+                        <!-- Design Tokens Legend Overlay -->
+                        <div class="topology-legend-overlay">
+                            <div class="legend-chip" title="Hardware Node styled with Stark Black (#0F1115)">
+                                <span class="legend-swatch legend-swatch-device"></span>
+                                <span>Device (#0F1115)</span>
+                            </div>
+                            <span class="topology-ctrl-divider"></span>
+                            <div class="legend-chip" title="Network Subnet styled with Pastel Mint (#D4F0EB)">
+                                <span class="legend-swatch legend-swatch-subnet"></span>
+                                <span>Subnet (#D4F0EB)</span>
+                            </div>
+                            <span class="topology-ctrl-divider"></span>
+                            <div class="legend-chip" title="Interface Link (ip_addresses)">
+                                <span class="legend-swatch legend-swatch-link"></span>
+                                <span>Interface IP Link</span>
+                            </div>
+                        </div>
+
+                        <!-- Visual Loading State Overlay -->
+                        <div id="topology-loading-overlay" class="topology-loading-overlay">
+                            <div class="topology-spinner"></div>
+                            <span>Querying PostgreSQL relational topology schema...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Interactive Node & Edge Inspector Card -->
+            <div class="card topology-inspector-card" id="topology-inspector">
+                <div class="card-header">
+                    <h3 class="card-title" id="inspector-headline">Inspector</h3>
+                    <p class="card-subtitle" id="inspector-subheadline">Entity Metadata & Connections</p>
+                </div>
+                <div class="card-body" id="inspector-content">
+                    <div style="text-align: center; padding: 24px 8px; color: var(--text-muted);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width: 42px; height: 42px; margin: 0 auto 12px; color: var(--text-subtle);">
+                            <circle cx="6" cy="6" r="3"></circle>
+                            <circle cx="18" cy="6" r="3"></circle>
+                            <circle cx="12" cy="18" r="3"></circle>
+                            <line x1="8.5" y1="7.5" x2="10" y2="16"></line>
+                            <line x1="15.5" y1="7.5" x2="14" y2="16"></line>
+                            <line x1="9" y1="6" x2="15" y2="6"></line>
+                        </svg>
+                        <h4 style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">No Selection</h4>
+                        <p style="font-size: 12.5px; line-height: 1.5; color: var(--text-muted); margin: 0;">Click any device node, subnet node, or interface link on the canvas to inspect live relational attributes.</p>
+                    </div>
+
+                    <div style="margin-top: 20px; border-top: 1px solid var(--border-light); padding-top: 16px;">
+                        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Canvas Controls</span>
+                        <ul style="margin: 8px 0 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                            <li>Drag background to pan view</li>
+                            <li>Scroll wheel to zoom in / out</li>
+                            <li>Drag nodes to rearrange cluster</li>
+                            <li>Double-click node to center & focus</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- vis-network Canvas Graph Engine CDN Fallback for Direct Navigation -->
+<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<script>if (typeof window.vis === 'undefined') document.write('<script src="/js/vis-network.min.js"><\/script>');</script>
+
+<script>
+    /**
+     * Netgrid Topology Canvas Engine
+     * Idempotent initialization tied into standard DOM load and Swup lifecycle hooks.
+     */
+    function initTopologyPage() {
+        const container = document.getElementById('topology-canvas-viewport');
+        if (!container) return;
+
+        // Idempotency: Destroy previous network instance to eliminate memory leaks and duplicate canvas contexts
+        if (window.currentTopologyNetwork) {
+            try {
+                window.currentTopologyNetwork.destroy();
+            } catch (err) {
+                console.warn('Error destroying existing vis.Network:', err);
+            }
+            window.currentTopologyNetwork = null;
+        }
+
+        // Prevent redundant concurrent execution if already fetching on the same DOM element
+        if (container.dataset.status === 'fetching') {
+            return;
+        }
+        container.dataset.status = 'fetching';
+
+        const loadingOverlay = document.getElementById('topology-loading-overlay');
+        const inspectorHeadline = document.getElementById('inspector-headline');
+        const inspectorSubheadline = document.getElementById('inspector-subheadline');
+        const inspectorContent = document.getElementById('inspector-content');
+        const searchInput = document.getElementById('topology-search-input');
+        const btnFitView = document.getElementById('btn-fit-view');
+        const btnRefresh = document.getElementById('btn-refresh-topology');
+        const btnZoomIn = document.getElementById('ctrl-zoom-in');
+        const btnZoomOut = document.getElementById('ctrl-zoom-out');
+        const btnTogglePhysics = document.getElementById('ctrl-toggle-physics');
+
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('hidden');
+        }
+
+        // Helper: Reset Inspector Panel to Default Empty State
+        function resetInspector() {
+            if (!inspectorHeadline || !inspectorSubheadline || !inspectorContent) return;
+            inspectorHeadline.textContent = 'Inspector';
+            inspectorSubheadline.textContent = 'Entity Metadata & Connections';
+            inspectorContent.innerHTML = `
+                <div style="text-align: center; padding: 24px 8px; color: var(--text-muted);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width: 42px; height: 42px; margin: 0 auto 12px; color: var(--text-subtle);">
+                        <circle cx="6" cy="6" r="3"></circle>
+                        <circle cx="18" cy="6" r="3"></circle>
+                        <circle cx="12" cy="18" r="3"></circle>
+                        <line x1="8.5" y1="7.5" x2="10" y2="16"></line>
+                        <line x1="15.5" y1="7.5" x2="14" y2="16"></line>
+                        <line x1="9" y1="6" x2="15" y2="6"></line>
+                    </svg>
+                    <h4 style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">No Selection</h4>
+                    <p style="font-size: 12.5px; line-height: 1.5; color: var(--text-muted); margin: 0;">Click any device node, subnet node, or interface link on the canvas to inspect live relational attributes.</p>
+                </div>
+                <div style="margin-top: 20px; border-top: 1px solid var(--border-light); padding-top: 16px;">
+                    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Canvas Controls</span>
+                    <ul style="margin: 8px 0 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                        <li>Drag background to pan view</li>
+                        <li>Scroll wheel to zoom in / out</li>
+                        <li>Drag nodes to rearrange cluster</li>
+                        <li>Double-click node to center & focus</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        // Helper: Render Device Details in Inspector
+        function renderDeviceInspector(device, connectedEdges, allNodes) {
+            if (!inspectorHeadline || !inspectorSubheadline || !inspectorContent) return;
+            inspectorHeadline.textContent = device.label;
+            inspectorSubheadline.textContent = 'Hardware Node Inspection';
+
+            let connectionsHtml = '';
+            if (connectedEdges.length === 0) {
+                connectionsHtml = '<div style="font-size: 12px; color: var(--text-muted); font-style: italic; padding: 6px 0;">No active IP allocations bound to subnets.</div>';
+            } else {
+                connectionsHtml = connectedEdges.map(edge => {
+                    const subnetNode = allNodes.find(n => n.id === edge.to);
+                    const subnetLabel = subnetNode ? subnetNode.label : 'Subnet';
+                    return `
+                        <div class="inspector-link-item">
+                            <div>
+                                <span style="font-family: var(--font-mono); font-weight: 600; color: var(--text-main);">${edge.ip}</span>
+                                ${edge.port_name ? `<span style="color: var(--text-muted); margin-left: 4px;">(${edge.port_name})</span>` : ''}
+                            </div>
+                            <span class="badge badge-mint" style="font-size: 10.5px;">${subnetLabel}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            inspectorContent.innerHTML = `
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">Entity Type</span>
+                    <span class="badge" style="background: #0F1115; color: #FFFFFF; font-size: 11px;">Hardware Device</span>
+                </div>
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">Hostname</span>
+                    <span class="inspector-meta-value mono">${device.label}</span>
+                </div>
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">Role</span>
+                    <span class="badge badge-cyan" style="font-size: 11px;">${device.role || 'Unspecified'}</span>
+                </div>
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">Management IP</span>
+                    <span class="inspector-meta-value mono">${device.management_ip || 'None'}</span>
+                </div>
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">Active Subnet Links</span>
+                    <span class="inspector-meta-value">${connectedEdges.length}</span>
+                </div>
+
+                <div style="margin-top: 18px;">
+                    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Interface Allocations</span>
+                    <div class="inspector-link-list">
+                        ${connectionsHtml}
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <a href="/devices" class="btn btn-secondary btn-sm" style="width: 100%;" data-no-swup="false">
+                        <span>Open in Device Registry</span>
+                    </a>
+                </div>
+            `;
+        }
+
+        // Helper: Render Subnet Details in Inspector
+        function renderSubnetInspector(subnet, connectedEdges, allNodes) {
+            if (!inspectorHeadline || !inspectorSubheadline || !inspectorContent) return;
+            inspectorHeadline.textContent = subnet.label;
+            inspectorSubheadline.textContent = 'Subnet Scope Inspection';
+
+            let connectionsHtml = '';
+            if (connectedEdges.length === 0) {
+                connectionsHtml = '<div style="font-size: 12px; color: var(--text-muted); font-style: italic; padding: 6px 0;">No hardware devices assigned in this subnet.</div>';
+            } else {
+                connectionsHtml = connectedEdges.map(edge => {
+                    const devNode = allNodes.find(n => n.id === edge.from);
+                    const devLabel = devNode ? devNode.label : 'Device';
+                    return `
+                        <div class="inspector-link-item">
+                            <div>
+                                <span style="font-family: var(--font-mono); font-weight: 600; color: var(--text-main);">${edge.ip}</span>
+                                ${edge.port_name ? `<span style="color: var(--text-muted); margin-left: 4px;">(${edge.port_name})</span>` : ''}
+                            </div>
+                            <span class="badge" style="background: #0F1115; color: #FFFFFF; font-size: 10.5px;">${devLabel}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            inspectorContent.innerHTML = `
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">Entity Type</span>
+                    <span class="badge badge-mint" style="font-size: 11px;">IP Subnet</span>
+                </div>
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">CIDR Network</span>
+                    <span class="inspector-meta-value mono">${subnet.label}</span>
+                </div>
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">VLAN Binding</span>
+                    <span class="inspector-meta-value">${subnet.vlan_tag ? `VLAN ${subnet.vlan_tag} (${subnet.vlan_name || 'VLAN'})` : '<span style="color: var(--text-muted);">Untagged</span>'}</span>
+                </div>
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">Description</span>
+                    <span class="inspector-meta-value" style="font-weight: 400; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${subnet.description || 'No description'}</span>
+                </div>
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">Bound Hardware</span>
+                    <span class="inspector-meta-value">${connectedEdges.length}</span>
+                </div>
+
+                <div style="margin-top: 18px;">
+                    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Connected Hardware Endpoints</span>
+                    <div class="inspector-link-list">
+                        ${connectionsHtml}
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <a href="/ipam/subnets/${subnet.rawId}" class="btn btn-secondary btn-sm" style="width: 100%;">
+                        <span>Open Subnet Space Map</span>
+                    </a>
+                </div>
+            `;
+        }
+
+        // Helper: Render Edge Details in Inspector
+        function renderEdgeInspector(edge, allNodes) {
+            if (!inspectorHeadline || !inspectorSubheadline || !inspectorContent) return;
+            const fromNode = allNodes.find(n => n.id === edge.from);
+            const toNode = allNodes.find(n => n.id === edge.to);
+
+            inspectorHeadline.textContent = edge.ip;
+            inspectorSubheadline.textContent = 'Interface Link Connection';
+
+            inspectorContent.innerHTML = `
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">Connection Type</span>
+                    <span class="badge badge-cyan" style="font-size: 11px;">L3 IP Interconnect</span>
+                </div>
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">IP Address</span>
+                    <span class="inspector-meta-value mono">${edge.ip}</span>
+                </div>
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">Interface Port</span>
+                    <span class="inspector-meta-value mono">${edge.port_name || 'Unspecified'}</span>
+                </div>
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">Hardware Node</span>
+                    <span class="inspector-meta-value mono">${fromNode ? fromNode.label : edge.device_hostname}</span>
+                </div>
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">Subnet Scope</span>
+                    <span class="inspector-meta-value mono">${toNode ? toNode.label : edge.subnet_network}</span>
+                </div>
+                <div class="inspector-meta-row">
+                    <span class="inspector-meta-label">Description</span>
+                    <span class="inspector-meta-value" style="font-weight: 400;">${edge.description || 'None'}</span>
+                </div>
+
+                <div style="margin-top: 20px; display: flex; gap: 8px;">
+                    ${toNode ? `<a href="/ipam/subnets/${toNode.rawId}" class="btn btn-secondary btn-sm" style="flex: 1;"><span>View Subnet</span></a>` : ''}
+                    <a href="/devices" class="btn btn-secondary btn-sm" style="flex: 1;"><span>View Device</span></a>
+                </div>
+            `;
+        }
+
+        // Ensure vis library is ready
+        function ensureVisLoaded() {
+            return new Promise((resolve, reject) => {
+                if (typeof window.vis !== 'undefined' && window.vis.Network) {
+                    return resolve(window.vis);
+                }
+                // Check if script tag is loading
+                let retries = 0;
+                const interval = setInterval(() => {
+                    retries++;
+                    if (typeof window.vis !== 'undefined' && window.vis.Network) {
+                        clearInterval(interval);
+                        return resolve(window.vis);
+                    }
+                    if (retries > 50) {
+                        clearInterval(interval);
+                        reject(new Error('Timed out waiting for vis-network library to load from CDN.'));
+                    }
+                }, 100);
+            });
+        }
+
+        // Fetch Relational Topology Payload from GET /topology/api
+        ensureVisLoaded().then(() => {
+            return fetch('/topology/api', {
+                headers: {
+                    'Accept': 'application/json',
+                },
+            });
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('HTTP ' + res.status + ' loading topology data.');
+            return res.json();
+        })
+        .then(payload => {
+            if (!payload.success) throw new Error(payload.error || 'Server error loading topology.');
+
+            // Check if DOM container is still present in document (guard against rapid navigation during fetch)
+            if (!document.body.contains(container)) return;
+
+            const nodes = payload.nodes || [];
+            const edges = payload.edges || [];
+
+            // Update top bar live counts
+            const devCounter = document.getElementById('top-metric-devices');
+            const subCounter = document.getElementById('top-metric-subnets');
+            const linkCounter = document.getElementById('top-metric-links');
+            if (devCounter) devCounter.textContent = payload.metrics ? payload.metrics.devices : nodes.filter(n => n.type === 'device').length;
+            if (subCounter) subCounter.textContent = payload.metrics ? payload.metrics.subnets : nodes.filter(n => n.type === 'subnet').length;
+            if (linkCounter) linkCounter.textContent = payload.metrics ? payload.metrics.links : edges.length;
+
+            const visNodes = new window.vis.DataSet(nodes);
+            const visEdges = new window.vis.DataSet(edges);
+
+            // vis-network configuration adhering strictly to Soft Light aesthetic
+            const networkOptions = {
+                nodes: {
+                    shape: 'box',
+                    margin: 12,
+                    borderWidth: 2,
+                    shapeProperties: {
+                        borderRadius: 12,
+                    },
+                    shadow: {
+                        enabled: true,
+                        color: 'rgba(15, 17, 21, 0.06)',
+                        size: 8,
+                        x: 0,
+                        y: 3,
+                    },
+                },
+                edges: {
+                    width: 2,
+                    color: {
+                        color: '#94A3B8',
+                        highlight: '#0F1115',
+                        hover: '#0F5144',
+                    },
+                    smooth: {
+                        type: 'continuous',
+                        roundness: 0.35,
+                    },
+                    font: {
+                        face: 'JetBrains Mono, monospace',
+                        size: 11,
+                        color: '#475569',
+                        background: '#FFFFFF',
+                        strokeWidth: 0,
+                        align: 'middle',
+                    },
+                    selectionWidth: 3,
+                },
+                physics: {
+                    enabled: true,
+                    solver: 'forceAtlas2Based',
+                    forceAtlas2Based: {
+                        gravitationalConstant: -60,
+                        centralGravity: 0.015,
+                        springLength: 140,
+                        springConstant: 0.06,
+                        damping: 0.45,
+                        avoidOverlap: 0.5,
+                    },
+                    stabilization: {
+                        enabled: true,
+                        iterations: 150,
+                        updateInterval: 25,
+                    },
+                },
+                interaction: {
+                    hover: true,
+                    hoverConnectedEdges: true,
+                    selectConnectedEdges: true,
+                    tooltipDelay: 150,
+                    zoomView: true,
+                    dragView: true,
+                    dragNodes: true,
+                },
+            };
+
+            const network = new window.vis.Network(container, { nodes: visNodes, edges: visEdges }, networkOptions);
+            window.currentTopologyNetwork = network;
+            container.dataset.status = 'ready';
+
+            // Stabilization Lifecycle: Hide loading spinner & freeze physics to conserve host memory & CPU
+            network.once('stabilizationIterationsDone', () => {
+                if (loadingOverlay) loadingOverlay.classList.add('hidden');
+                network.setOptions({ physics: { enabled: false } });
+                if (btnTogglePhysics) btnTogglePhysics.classList.remove('active');
+            });
+
+            // Fallback timeout to dismiss spinner if stabilization takes long
+            setTimeout(() => {
+                if (loadingOverlay) loadingOverlay.classList.add('hidden');
+            }, 1200);
+
+            // Selection Event Handling
+            network.on('click', (params) => {
+                if (params.nodes && params.nodes.length > 0) {
+                    const selectedNodeId = params.nodes[0];
+                    const selectedNode = nodes.find(n => n.id === selectedNodeId);
+                    if (!selectedNode) return;
+
+                    if (selectedNode.type === 'device') {
+                        const connected = edges.filter(e => e.from === selectedNodeId);
+                        renderDeviceInspector(selectedNode, connected, nodes);
+                    } else if (selectedNode.type === 'subnet') {
+                        const connected = edges.filter(e => e.to === selectedNodeId);
+                        renderSubnetInspector(selectedNode, connected, nodes);
+                    }
+                } else if (params.edges && params.edges.length > 0) {
+                    const selectedEdgeId = params.edges[0];
+                    const selectedEdge = edges.find(e => e.id === selectedEdgeId);
+                    if (selectedEdge) {
+                        renderEdgeInspector(selectedEdge, nodes);
+                    }
+                } else {
+                    resetInspector();
+                }
+            });
+
+            // Double Click to Center and Focus Node
+            network.on('doubleClick', (params) => {
+                if (params.nodes && params.nodes.length > 0) {
+                    network.focus(params.nodes[0], {
+                        scale: 1.25,
+                        animation: { duration: 300, easingFunction: 'easeInOutQuad' },
+                    });
+                }
+            });
+
+            // Control Actions
+            if (btnFitView) {
+                btnFitView.onclick = () => {
+                    network.fit({ animation: { duration: 350, easingFunction: 'easeInOutQuad' } });
+                };
+            }
+
+            if (btnZoomIn) {
+                btnZoomIn.onclick = () => {
+                    const scale = network.getScale();
+                    network.moveTo({ scale: scale * 1.3, animation: { duration: 200 } });
+                };
+            }
+
+            if (btnZoomOut) {
+                btnZoomOut.onclick = () => {
+                    const scale = network.getScale();
+                    network.moveTo({ scale: scale / 1.3, animation: { duration: 200 } });
+                };
+            }
+
+            if (btnTogglePhysics) {
+                btnTogglePhysics.onclick = () => {
+                    const isCurrentlyEnabled = btnTogglePhysics.classList.contains('active');
+                    if (isCurrentlyEnabled) {
+                        network.setOptions({ physics: { enabled: false } });
+                        btnTogglePhysics.classList.remove('active');
+                    } else {
+                        network.setOptions({ physics: { enabled: true } });
+                        btnTogglePhysics.classList.add('active');
+                    }
+                };
+            }
+
+            if (btnRefresh) {
+                btnRefresh.onclick = () => {
+                    container.dataset.status = '';
+                    initTopologyPage();
+                };
+            }
+
+            // Real-time Search and Node Focus
+            if (searchInput) {
+                searchInput.oninput = (e) => {
+                    const query = e.target.value.toLowerCase().trim();
+                    if (!query) return;
+
+                    const match = nodes.find(n => n.label.toLowerCase().includes(query));
+                    if (match) {
+                        network.selectNodes([match.id]);
+                        network.focus(match.id, {
+                            scale: 1.2,
+                            animation: { duration: 250, easingFunction: 'easeInOutQuad' },
+                        });
+
+                        if (match.type === 'device') {
+                            const connected = edges.filter(ed => ed.from === match.id);
+                            renderDeviceInspector(match, connected, nodes);
+                        } else {
+                            const connected = edges.filter(ed => ed.to === match.id);
+                            renderSubnetInspector(match, connected, nodes);
+                        }
+                    }
+                };
+            }
+        })
+        .catch(err => {
+            console.error('Topology engine initialization error:', err);
+            container.dataset.status = 'error';
+            if (loadingOverlay) {
+                loadingOverlay.innerHTML = `
+                    <div style="color: var(--danger-text); background: var(--danger-light); border: 1px solid var(--danger-border); padding: 14px 20px; border-radius: var(--radius-md); max-width: 400px; text-align: center;">
+                        <strong style="display: block; margin-bottom: 4px;">Canvas Engine Error</strong>
+                        <span style="font-size: 12px;">${err.message || 'Failed to render relational canvas.'}</span>
+                        <div style="margin-top: 10px;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="container.dataset.status=''; initTopologyPage();">Retry</button>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+    }
+
+    // Attach to window for Swup content:replace lifecycle hook
+    window.initTopologyPage = initTopologyPage;
+
+    // Self-execute on initial direct page load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initTopologyPage);
+    } else {
+        initTopologyPage();
+    }
+</script>
+
+<%- include('partials/footer') %>

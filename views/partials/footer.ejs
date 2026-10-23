@@ -27,6 +27,10 @@
     <!-- Navigation Progress Indicator -->
     <div id="netgrid-nav-progress" class="nav-progress-bar" aria-hidden="true"></div>
 
+    <!-- vis-network Canvas Graph Engine (CDN with local fallback) -->
+    <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+    <script>if (typeof window.vis === 'undefined') document.write('<script src="/js/vis-network.min.js"><\/script>');</script>
+
     <!-- Swup.js Transition Engine & Scripts Plugin -->
     <script src="/js/swup.umd.js"></script>
     <script src="/js/swup-scripts-plugin.umd.js"></script>
@@ -55,6 +59,10 @@
                 // Subnet Detail Space Map & Assign Modal
                 if ((document.getElementById('space-map-grid') || document.getElementById('assign-ip-modal')) && typeof window.initSubnetDetailPage === 'function') {
                     try { window.initSubnetDetailPage(); } catch (e) { console.error('Subnet detail init error:', e); }
+                }
+                // Topology Graph Canvas Engine
+                if (document.getElementById('topology-canvas-viewport') && typeof window.initTopologyPage === 'function') {
+                    try { window.initTopologyPage(); } catch (e) { console.error('Topology init error:', e); }
                 }
             }
             window.remountActivePageScripts = remountActivePageScripts;

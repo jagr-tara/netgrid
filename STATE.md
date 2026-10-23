@@ -24,6 +24,8 @@
 - `POST /devices`: Register hardware with strict HTML <select> role whitelist constraint and optional management IP.
 - `POST /devices/:id/edit`: Update device parameters with strict role validation.
 - `POST /devices/:id/delete`: Delete hardware node with cascading credential cleanup and IP unbinding.
+- `GET /topology`: Interactive dynamic client-side network topology graphing engine (`views/topology.ejs`).
+- `GET /topology/api`: Asynchronous JSON endpoint returning structured `nodes` (devices in `#0F1115` stark black, subnets in `#D4F0EB` pastel mint) and `edges` (mapping `ip_addresses` connections between devices and subnets).
 
 ## UI/UX Redesign ("Soft Light Dashboard" Aesthetic)
 - Complete overhaul of `/opt/netgrid/public/css/style.css`, `header.ejs`, `navbar.ejs`, and `footer.ejs`.
@@ -48,8 +50,10 @@
 - Data Tables Density:
   - `/ipam`, `/vlans`, and `/devices` retain high-density tabular presentation with compact padding and monospace values
   - Subnet Space Map styled with stark black allocated blocks (`#0F1115`) on clean panels with mint hover effects
-- Swup.js Transitions:
+- Swup.js Transitions & Dynamic Topology Engine:
   - `#swup` transition container and sliding animations (`200ms` cubic-bezier) preserved and fully functional.
+  - Idempotent `initTopologyPage()` function integrated into `remountActivePageScripts()` tied to Swup `content:replace` and `page:view` hooks in `footer.ejs`.
+  - Client-side canvas rendered via `vis-network` CDN with ForceAtlas2 physics stabilization, interactive selection inspector, dynamic search focus, and navigation zoom/fit controls.
 
 ## Current Task
-- Completed Soft Light Dashboard aesthetic overhaul. Next: Build Credentials Vault module (`/credentials`) or Topology Graph (`/topology`).
+- Dynamic Topology Graph (`/topology` and `/topology/api`) implemented, verified, and operational. Host RAM within limit (1,514 MB / 3,072 MB). Next: Credentials Vault module (`/credentials`) or Flow Matrix rules.
