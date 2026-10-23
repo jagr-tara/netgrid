@@ -1,11 +1,13 @@
 <header class="app-header floating-header">
     <div class="header-container floating-header-inner">
-        <!-- Left: Circle Console Action & Large Title -->
+        <!-- Left: Console Action Circle & Brand Title -->
         <div class="header-brand-group">
-            <a href="/" class="header-circle-btn" aria-label="Netgrid Home" title="Netgrid Console Hub">
+            <a href="/" class="header-circle-btn" aria-label="Netgrid Home" title="Netgrid Console">
                 <svg viewBox="0 0 24 24" class="header-circle-icon" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                    <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                    <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                    <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                    <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                 </svg>
             </a>
             <div class="header-title-stack">
@@ -18,7 +20,7 @@
             </div>
         </div>
 
-        <!-- Center: Floating Pill Navigation Cluster -->
+        <!-- Center: Floating Pill Navigation Cluster (Interactive Top Header) -->
         <nav class="main-nav floating-nav-cluster" aria-label="Main Navigation">
             <ul class="nav-list floating-pill-list">
                 <li class="nav-item">
@@ -30,9 +32,6 @@
                             <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
                         </svg>
                         <span class="nav-pill-label">Dashboard</span>
-                        <% if (typeof currentPath !== 'undefined' && currentPath === '/') { %>
-                            <span class="neon-active-dot" aria-hidden="true"></span>
-                        <% } %>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -42,9 +41,6 @@
                             <path d="M12 3v6m0 6v6M3 12h6m6 0h6"></path>
                         </svg>
                         <span class="nav-pill-label">IPAM</span>
-                        <% if (typeof currentPath !== 'undefined' && currentPath.startsWith('/ipam')) { %>
-                            <span class="neon-active-dot" aria-hidden="true"></span>
-                        <% } %>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -55,9 +51,6 @@
                             <polyline points="2 12 12 17 22 12"></polyline>
                         </svg>
                         <span class="nav-pill-label">VLANs</span>
-                        <% if (typeof currentPath !== 'undefined' && currentPath.startsWith('/vlans')) { %>
-                            <span class="neon-active-dot" aria-hidden="true"></span>
-                        <% } %>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -69,9 +62,6 @@
                             <line x1="6" y1="18" x2="6.01" y2="18"></line>
                         </svg>
                         <span class="nav-pill-label">Devices</span>
-                        <% if (typeof currentPath !== 'undefined' && currentPath.startsWith('/devices')) { %>
-                            <span class="neon-active-dot" aria-hidden="true"></span>
-                        <% } %>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -85,9 +75,6 @@
                             <line x1="9" y1="6" x2="15" y2="6"></line>
                         </svg>
                         <span class="nav-pill-label">Topology</span>
-                        <% if (typeof currentPath !== 'undefined' && currentPath.startsWith('/topology')) { %>
-                            <span class="neon-active-dot" aria-hidden="true"></span>
-                        <% } %>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -97,19 +84,16 @@
                             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                         </svg>
                         <span class="nav-pill-label">Credentials</span>
-                        <% if (typeof currentPath !== 'undefined' && currentPath.startsWith('/credentials')) { %>
-                            <span class="neon-active-dot" aria-hidden="true"></span>
-                        <% } %>
                     </a>
                 </li>
             </ul>
         </nav>
 
-        <!-- Right: Telemetry & Actions Dock -->
+        <!-- Right: Telemetry & Status Pill -->
         <div class="header-status floating-header-actions">
             <div class="status-indicator header-telemetry-pill" title="Connected to PostgreSQL Engine | RAM < 2,850MB Threshold">
-                <span class="status-dot neon-pulse-glow" aria-hidden="true"></span>
-                <span class="status-text telemetry-badge-text">PG 15 &bull; 3072MB</span>
+                <span class="status-dot status-dot-emerald" aria-hidden="true"></span>
+                <span class="status-text telemetry-badge-text">PG 15 &bull; 3,072 MB</span>
             </div>
         </div>
     </div>

@@ -19,10 +19,10 @@
 
 
 ## UI and Design Rules (Anti-Vibecoding Constraints)
-- **Spacing & Grid:** Enforce a strict rhythm. Maintain high data density for tables, but allow generous padding for layout containers.
-- **Typography:** Use a modern, rounded sans-serif font system. 
-- **Color & Styling:** Adopt a medical/dashboard aesthetic: use beige/off-white backgrounds, dark charcoal floating containers, and neon yellow accents. Completely remove the previous coral palette.
-- **Consistency:** Use pill-shaped (fully rounded) buttons and heavy border-radius (e.g., 16px - 24px) for cards and layout containers.
-- **Interactions & Navigation:** Implement smooth client-side page transitions (via Swup.js or HTMX) to slide between EJS views without hard browser reloads.
-- **State Management:** All async actions must have visual loading states (spinners or skeletons).
+- **Spacing & Grid:** Enforce a strict rhythm. Maintain tabular density for IPAM/VLANs but use generous whitespace for outer layouts.
+- **Typography:** Use a clean, geometric sans-serif font (e.g., Poppins, DM Sans, or exactly matching the provided reference).
+- **Color & Styling:** Adopt a "Soft Light Dashboard" aesthetic. Use clean white/light-gray backgrounds, pastel mint/cyan data panels, and stark black for primary interactive accents and buttons. Eliminate all previous dark charcoal, beige, and neon yellow tokens.
+- **Consistency:** Use soft rounded corners (approx. 20px-24px) for main layout cards, and strict pill-shapes for buttons and toggles. 
+- **Interactions & Navigation:** Maintain the Swup.js client-side page transitions. Ensure hover states use soft shadows or gentle opacity shifts.
+- **State Management:** All async actions must have visual loading states.
 - **Completeness:** Output production-ready markup.

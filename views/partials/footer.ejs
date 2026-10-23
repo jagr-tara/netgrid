@@ -16,7 +16,7 @@
                             <span class="dock-divider"></span>
                             <span class="dock-meta-item">DB: <strong>PostgreSQL 15</strong></span>
                             <span class="dock-divider"></span>
-                            <span class="dock-meta-item">Engine: <strong>RESTful Express</strong></span>
+                            <span class="dock-meta-item">Engine: <strong>Node.js RESTful</strong></span>
                         </div>
                     </div>
                 </div>
@@ -66,16 +66,6 @@
                     const href = pill.getAttribute('href');
                     const isActive = (href === '/' && currentPath === '/') || (href !== '/' && currentPath.startsWith(href));
                     pill.classList.toggle('active', isActive);
-
-                    const existingDot = pill.querySelector('.neon-active-dot');
-                    if (isActive && !existingDot) {
-                        const dot = document.createElement('span');
-                        dot.className = 'neon-active-dot';
-                        dot.setAttribute('aria-hidden', 'true');
-                        pill.appendChild(dot);
-                    } else if (!isActive && existingDot) {
-                        existingDot.remove();
-                    }
                 });
 
                 const scopePill = document.querySelector('.header-scope-pill');
@@ -117,7 +107,7 @@
                         progressBar.classList.add('done');
                         setTimeout(() => {
                             progressBar.classList.remove('active', 'done');
-                        }, 220);
+                        }, 200);
                     }
                 });
 

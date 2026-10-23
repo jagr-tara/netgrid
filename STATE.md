@@ -25,37 +25,31 @@
 - `POST /devices/:id/edit`: Update device parameters with strict role validation.
 - `POST /devices/:id/delete`: Delete hardware node with cascading credential cleanup and IP unbinding.
 
-## UI/UX Redesign (Medical Dashboard Aesthetic)
-- Complete rewrite of `/opt/netgrid/public/css/style.css`, `header.ejs`, `navbar.ejs`, and `footer.ejs`.
+## UI/UX Redesign ("Soft Light Dashboard" Aesthetic)
+- Complete overhaul of `/opt/netgrid/public/css/style.css`, `header.ejs`, `navbar.ejs`, and `footer.ejs`.
 - Color system extracted from reference dashboard:
-  - Medical stone beige canvas (`#E6E4DD`) with dark slate workstation frame (`#2B2E30`)
-  - Dark charcoal floating containers, action panels, and docks (`#1E2123`)
-  - Neon yellow active indicators, highlights, and pulsing telemetry dots (`#DFFF28`)
-  - Crisp high-contrast text (`#17191A`), muted slate labels (`#686C6A`), and clean dividers (`#DCD8CB`)
-  - Former coral palette completely removed across all stylesheets and views.
+  - Cool light-grey outer canvas backdrop (`#EBEEF2`)
+  - Crisp pure white workstation card surface (`#FFFFFF`) with diffuse shadows
+  - Pastel Mint data panels and active navigation fills (`#D4F0EB`, border: `#BFE5DD`, contrast text: `#0F5144`)
+  - Pastel Cyan badges and scope tags (`#E0F2FE`, border: `#BAE6FD`, text: `#0369A1`)
+  - Stark Black interactive primary buttons and controls (`#0F1115`, hover: `#22252A`, text: `#FFFFFF`)
+  - High-contrast text hierarchy: Deep slate (`#0F172A`), body text (`#1E293B`), refined slate muted (`#64748B`), and clean borders (`#E2E8F0`)
+  - Complete removal of former dark charcoal, beige, and neon yellow tokens.
 - Geometry & Radii:
-  - Extreme layout canvas border radius (`36px`)
-  - Layout containers, cards, and modal dialogs (`24px` - `28px`)
-  - All navigation items, action buttons, search inputs, and status badges strictly pill-shaped (`9999px`)
+  - Softer rounded corners (`20px - 24px`) for layout cards, data tables, and modals
+  - Strict pill-shapes (`9999px`) for buttons, toggles, badges, and search inputs
+- Typography:
+  - Imported Google Font `Poppins` (geometric modern sans-serif) for all UI headings, controls, and labels
+  - Preserved `JetBrains Mono` for tabular and network data
 - Navigation Architecture:
-  - Floating pill-shaped header with console circle action button and bold module title
-  - Pill navigation cluster with icons and neon active state indicators
-  - Dark charcoal telemetry dock displaying live PostgreSQL 15 status and 3,072 MB RAM constraint
-- Data Density:
-  - `/ipam`, `/vlans`, and `/devices` data tables retain rigorous tabular density and high legibility with monospace values.
-  - Subnet Space Map matrix updated with dark charcoal allocated cells and glowing neon yellow hovers.
-
-## Client-Side Sliding Page Transitions (Swup.js)
-- Transition Engine: Local `swup.umd.js` (v4.10.0) and `@swup/scripts-plugin` (v2.1.0) bundled into `/public/js/`.
-- Container Layout: `#swup` with `.transition-slide` wrapping page content, modals, and dynamic scripts between navbar and footer.
-- Animation Logic:
-  - `html.is-animating.is-leaving .transition-slide`: Outgoing view fades out and slides up (`-8px`) over 220ms.
-  - `html.is-animating.is-rendering .transition-slide`: Incoming view enters from slightly lower position (`+10px`) and slides into place.
-  - Top neon progress bar (`#netgrid-nav-progress`) illuminates during client fetch and transitions.
-- Idempotent Re-mount Architecture:
-  - Each module exports dedicated initialization functions (`initDashboardPage`, `initIpamPage`, `initVlansPage`, `initDevicesPage`, `initSubnetDetailPage`) with `dataset.initialized` guards.
-  - Swup hooks (`page:view` and `content:replace`) trigger `remountActivePageScripts()` to restore Space Map hovers, modal event listeners, and dynamic dropdown fetching.
-  - Header navigation active pill states and module scope tags dynamically sync on route change.
+  - Clean, white, floating header bar preserved at top (not moved to sidebar)
+  - Interactive pill cluster with active pastel mint background (`.nav-pill.active`)
+  - Telemetry pill with emerald status indicator dot (`#10B981`)
+- Data Tables Density:
+  - `/ipam`, `/vlans`, and `/devices` retain high-density tabular presentation with compact padding and monospace values
+  - Subnet Space Map styled with stark black allocated blocks (`#0F1115`) on clean panels with mint hover effects
+- Swup.js Transitions:
+  - `#swup` transition container and sliding animations (`200ms` cubic-bezier) preserved and fully functional.
 
 ## Current Task
-- Completed Swup.js sliding page transitions and script re-mounting. Next: Build Credentials Vault module (`/credentials`) or Topology Graph (`/topology`).
+- Completed Soft Light Dashboard aesthetic overhaul. Next: Build Credentials Vault module (`/credentials`) or Topology Graph (`/topology`).
