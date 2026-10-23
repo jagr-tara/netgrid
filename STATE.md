@@ -26,6 +26,10 @@
 - `POST /devices/:id/delete`: Delete hardware node with cascading credential cleanup and IP unbinding.
 - `GET /topology`: Interactive dynamic client-side network topology graphing engine (`views/topology.ejs`).
 - `GET /topology/api`: Asynchronous JSON endpoint returning structured `nodes` (devices in `#0F1115` stark black, subnets in `#D4F0EB` pastel mint) and `edges` (mapping `ip_addresses` connections between devices and subnets).
+- `GET /credentials`: Credentials Vault dashboard displaying hardware authentication keys with zero-exposure masked payloads (`views/credentials.ejs`).
+- `POST /credentials`: Secure credential storage with native Node.js `crypto` AES-256-GCM encryption and active device binding.
+- `POST /credentials/:id/delete`: Cryptographic record deletion endpoint.
+- `POST /credentials/:id/reveal`: On-demand secure authenticated decryption endpoint for clipboard copying.
 
 ## UI/UX Redesign ("Soft Light Dashboard" Aesthetic)
 - Complete overhaul of `/opt/netgrid/public/css/style.css`, `header.ejs`, `navbar.ejs`, and `footer.ejs`.
@@ -48,12 +52,12 @@
   - Interactive pill cluster with active pastel mint background (`.nav-pill.active`)
   - Telemetry pill with emerald status indicator dot (`#10B981`)
 - Data Tables Density:
-  - `/ipam`, `/vlans`, and `/devices` retain high-density tabular presentation with compact padding and monospace values
+  - `/ipam`, `/vlans`, `/devices`, and `/credentials` retain high-density tabular presentation with compact padding and monospace values
   - Subnet Space Map styled with stark black allocated blocks (`#0F1115`) on clean panels with mint hover effects
-- Swup.js Transitions & Dynamic Topology Engine:
+- Swup.js Transitions & Dynamic Engines:
   - `#swup` transition container and sliding animations (`200ms` cubic-bezier) preserved and fully functional.
   - Idempotent `initTopologyPage()` function integrated into `remountActivePageScripts()` tied to Swup `content:replace` and `page:view` hooks in `footer.ejs`.
-  - Client-side canvas rendered via `vis-network` CDN with ForceAtlas2 physics stabilization, interactive selection inspector, dynamic search focus, and navigation zoom/fit controls.
+  - Idempotent `initCredentialsPage()` function integrated into `remountActivePageScripts()` handling dynamic device binding modals, table search filters, and zero-exposure copy actions.
 
 ## Current Task
-- Dynamic Topology Graph (`/topology` and `/topology/api`) implemented, verified, and operational. Host RAM within limit (1,514 MB / 3,072 MB). Next: Credentials Vault module (`/credentials`) or Flow Matrix rules.
+- Credentials Vault module (`/credentials`) completed with native AES-256-GCM encryption, zero-exposure masking, PM2 daemon verified, and container RAM monitored (1,568 MB / 3,072 MB). Next: Flow Matrix rules engine or Security ACL policy mapper.

@@ -24,6 +24,9 @@ app.use('/devices', devicesRouter);
 const topologyRouter = require('./routes/topology');
 app.use('/topology', topologyRouter);
 
+const credentialsRouter = require('./routes/credentials');
+app.use('/credentials', credentialsRouter);
+
 app.get('/', async (req, res) => {
   try {
     const result = await db.query('SELECT NOW()');

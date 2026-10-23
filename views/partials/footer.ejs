@@ -64,6 +64,10 @@
                 if (document.getElementById('topology-canvas-viewport') && typeof window.initTopologyPage === 'function') {
                     try { window.initTopologyPage(); } catch (e) { console.error('Topology init error:', e); }
                 }
+                // Credentials Vault Table & Modal
+                if (document.getElementById('add-credential-modal') && typeof window.initCredentialsPage === 'function') {
+                    try { window.initCredentialsPage(); } catch (e) { console.error('Credentials init error:', e); }
+                }
             }
             window.remountActivePageScripts = remountActivePageScripts;
 
