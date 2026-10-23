@@ -3,16 +3,29 @@
 
 <main class="page-body">
     <div class="container">
+        <!-- Page Header -->
         <div class="page-header">
             <div>
+                <div class="breadcrumb">
+                    <span>Infrastructure</span>
+                    <span class="breadcrumb-separator">/</span>
+                    <span class="breadcrumb-current">Console</span>
+                </div>
                 <h1 class="page-title">Netgrid Infrastructure</h1>
-                <p class="page-subtitle">Authoritative Network Source of Truth & IP Address Management</p>
+                <p class="page-subtitle">Authoritative Network Source of Truth & High-Precision Infrastructure Platform</p>
             </div>
             <div class="header-actions">
-                <a href="/ipam" class="btn btn-primary">Open IPAM Module</a>
+                <a href="/ipam" class="btn btn-primary">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 3v6m0 6v6M3 12h6m6 0h6"></path>
+                    </svg>
+                    <span>Open IPAM Module</span>
+                </a>
             </div>
         </div>
 
+        <!-- Telemetry Stats Cards -->
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-label">System State</div>
@@ -27,13 +40,17 @@
             <div class="stat-card">
                 <div class="stat-label">RAM Footprint Constraint</div>
                 <div class="stat-value">3,072 MB</div>
-                <div class="stat-desc">Max threshold: 2,850 MB</div>
+                <div class="stat-desc">Hard threshold: 2,850 MB</div>
             </div>
         </div>
 
+        <!-- NSoT Modules Grid -->
         <div class="card mt-24">
-            <div class="card-header">
-                <h2 class="card-title">Available NSoT Modules</h2>
+            <div class="card-header flex-between">
+                <div>
+                    <h2 class="card-title">Available NSoT Modules</h2>
+                    <p class="card-subtitle">Authoritative network control modules and real-time operational views.</p>
+                </div>
             </div>
             <div class="card-body">
                 <div class="modules-grid">
@@ -42,19 +59,19 @@
                         <div class="module-desc">Manage CIDR prefixes, subnets, and host IP address allocations with validation.</div>
                         <span class="module-link">Go to IPAM &rarr;</span>
                     </a>
-                    <div class="module-card disabled">
-                        <div class="module-title">VLAN Inventory</div>
-                        <div class="module-desc">802.1Q VLAN IDs, naming, layer 2 segment assignments.</div>
-                        <span class="module-badge">Upcoming</span>
-                    </div>
-                    <div class="module-card disabled">
+                    <a href="/vlans" class="module-card">
+                        <div class="module-title">802.1Q VLAN Inventory</div>
+                        <div class="module-desc">Layer-2 broadcast domains, logical network segment identifiers, and subnet mappings.</div>
+                        <span class="module-link">Go to VLANs &rarr;</span>
+                    </a>
+                    <a href="/devices" class="module-card">
                         <div class="module-title">Device Registry</div>
-                        <div class="module-desc">Routers, switches, firewalls, and interface telemetry.</div>
-                        <span class="module-badge">Upcoming</span>
-                    </div>
+                        <div class="module-desc">Routers, switches, firewalls, layer-3 management endpoints, and credentials.</div>
+                        <span class="module-link">Go to Devices &rarr;</span>
+                    </a>
                     <div class="module-card disabled">
                         <div class="module-title">Topology Graph</div>
-                        <div class="module-desc">Interactive layer 2/3 visual topology mapping engine.</div>
+                        <div class="module-desc">Interactive client-side dynamic visual topology graphing engine.</div>
                         <span class="module-badge">Upcoming</span>
                     </div>
                 </div>

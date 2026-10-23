@@ -1,48 +1,116 @@
-<header class="app-header">
-    <div class="header-container">
-        <div class="brand-group">
-            <a href="/" class="brand-logo" aria-label="Netgrid Home">
-                <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="2" y="2" width="8" height="8" rx="2"></rect>
-                    <rect x="14" y="2" width="8" height="8" rx="2"></rect>
-                    <rect x="2" y="14" width="8" height="8" rx="2"></rect>
-                    <rect x="14" y="14" width="8" height="8" rx="2"></rect>
-                    <line x1="6" y1="10" x2="6" y2="14"></line>
-                    <line x1="18" y1="10" x2="18" y2="14"></line>
-                    <line x1="10" y1="6" x2="14" y2="6"></line>
-                    <line x1="10" y1="18" x2="14" y2="18"></line>
+<header class="app-header floating-header">
+    <div class="header-container floating-header-inner">
+        <!-- Left: Circle Console Action & Large Title -->
+        <div class="header-brand-group">
+            <a href="/" class="header-circle-btn" aria-label="Netgrid Home" title="Netgrid Console Hub">
+                <svg viewBox="0 0 24 24" class="header-circle-icon" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
-                <span class="brand-name">NETGRID</span>
-                <span class="brand-badge">NSoT</span>
             </a>
+            <div class="header-title-stack">
+                <a href="/" class="header-title-link">
+                    <span class="header-title-text">Netgrid</span>
+                </a>
+                <span class="header-scope-pill">
+                    <%= typeof currentPath !== 'undefined' ? (currentPath === '/' ? 'Console' : currentPath.split('/')[1].toUpperCase()) : 'NSoT' %>
+                </span>
+            </div>
         </div>
-        <nav class="main-nav" aria-label="Main Navigation">
-            <ul class="nav-list">
+
+        <!-- Center: Floating Pill Navigation Cluster -->
+        <nav class="main-nav floating-nav-cluster" aria-label="Main Navigation">
+            <ul class="nav-list floating-pill-list">
                 <li class="nav-item">
-                    <a href="/" class="nav-link <%= typeof currentPath !== 'undefined' && currentPath === '/' ? 'active' : '' %>">Dashboard</a>
+                    <a href="/" class="nav-link nav-pill <%= typeof currentPath !== 'undefined' && currentPath === '/' ? 'active' : '' %>">
+                        <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                            <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                            <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                            <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                        </svg>
+                        <span class="nav-pill-label">Dashboard</span>
+                        <% if (typeof currentPath !== 'undefined' && currentPath === '/') { %>
+                            <span class="neon-active-dot" aria-hidden="true"></span>
+                        <% } %>
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/ipam" class="nav-link <%= typeof currentPath !== 'undefined' && currentPath.startsWith('/ipam') ? 'active' : '' %>">IPAM</a>
+                    <a href="/ipam" class="nav-link nav-pill <%= typeof currentPath !== 'undefined' && currentPath.startsWith('/ipam') ? 'active' : '' %>">
+                        <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 3v6m0 6v6M3 12h6m6 0h6"></path>
+                        </svg>
+                        <span class="nav-pill-label">IPAM</span>
+                        <% if (typeof currentPath !== 'undefined' && currentPath.startsWith('/ipam')) { %>
+                            <span class="neon-active-dot" aria-hidden="true"></span>
+                        <% } %>
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/vlans" class="nav-link <%= typeof currentPath !== 'undefined' && currentPath.startsWith('/vlans') ? 'active' : '' %>">VLANs</a>
+                    <a href="/vlans" class="nav-link nav-pill <%= typeof currentPath !== 'undefined' && currentPath.startsWith('/vlans') ? 'active' : '' %>">
+                        <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                            <polyline points="2 17 12 22 22 17"></polyline>
+                            <polyline points="2 12 12 17 22 12"></polyline>
+                        </svg>
+                        <span class="nav-pill-label">VLANs</span>
+                        <% if (typeof currentPath !== 'undefined' && currentPath.startsWith('/vlans')) { %>
+                            <span class="neon-active-dot" aria-hidden="true"></span>
+                        <% } %>
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/devices" class="nav-link <%= typeof currentPath !== 'undefined' && currentPath.startsWith('/devices') ? 'active' : '' %>">Devices</a>
+                    <a href="/devices" class="nav-link nav-pill <%= typeof currentPath !== 'undefined' && currentPath.startsWith('/devices') ? 'active' : '' %>">
+                        <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="2" width="20" height="8" rx="2"></rect>
+                            <rect x="2" y="14" width="20" height="8" rx="2"></rect>
+                            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                        </svg>
+                        <span class="nav-pill-label">Devices</span>
+                        <% if (typeof currentPath !== 'undefined' && currentPath.startsWith('/devices')) { %>
+                            <span class="neon-active-dot" aria-hidden="true"></span>
+                        <% } %>
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/topology" class="nav-link <%= typeof currentPath !== 'undefined' && currentPath.startsWith('/topology') ? 'active' : '' %>">Topology</a>
+                    <a href="/topology" class="nav-link nav-pill <%= typeof currentPath !== 'undefined' && currentPath.startsWith('/topology') ? 'active' : '' %>">
+                        <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="6" cy="6" r="3"></circle>
+                            <circle cx="18" cy="6" r="3"></circle>
+                            <circle cx="12" cy="18" r="3"></circle>
+                            <line x1="8.5" y1="7.5" x2="10" y2="16"></line>
+                            <line x1="15.5" y1="7.5" x2="14" y2="16"></line>
+                            <line x1="9" y1="6" x2="15" y2="6"></line>
+                        </svg>
+                        <span class="nav-pill-label">Topology</span>
+                        <% if (typeof currentPath !== 'undefined' && currentPath.startsWith('/topology')) { %>
+                            <span class="neon-active-dot" aria-hidden="true"></span>
+                        <% } %>
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/credentials" class="nav-link <%= typeof currentPath !== 'undefined' && currentPath.startsWith('/credentials') ? 'active' : '' %>">Credentials</a>
+                    <a href="/credentials" class="nav-link nav-pill <%= typeof currentPath !== 'undefined' && currentPath.startsWith('/credentials') ? 'active' : '' %>">
+                        <svg class="nav-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        <span class="nav-pill-label">Credentials</span>
+                        <% if (typeof currentPath !== 'undefined' && currentPath.startsWith('/credentials')) { %>
+                            <span class="neon-active-dot" aria-hidden="true"></span>
+                        <% } %>
+                    </a>
                 </li>
             </ul>
         </nav>
-        <div class="header-status">
-            <span class="status-indicator" title="Connected to PostgreSQL Engine">
-                <span class="status-dot"></span>
-                <span class="status-text">PostgreSQL 15</span>
-            </span>
+
+        <!-- Right: Telemetry & Actions Dock -->
+        <div class="header-status floating-header-actions">
+            <div class="status-indicator header-telemetry-pill" title="Connected to PostgreSQL Engine | RAM < 2,850MB Threshold">
+                <span class="status-dot neon-pulse-glow" aria-hidden="true"></span>
+                <span class="status-text telemetry-badge-text">PG 15 &bull; 3072MB</span>
+            </div>
         </div>
     </div>
 </header>

@@ -1,12 +1,60 @@
-    <footer class="app-footer">
-        <div class="footer-container">
-            <div class="footer-left">
-                <span>Netgrid Network Source of Truth &copy; <%= new Date().getFullYear() %></span>
-            </div>
-            <div class="footer-right">
-                <span class="system-meta">RAM Limit: 3072MB | Architecture: RESTful Node/PG</span>
-            </div>
-        </div>
-    </footer>
+            <footer class="app-footer">
+                <div class="footer-container">
+                    <div class="footer-left">
+                        <div class="footer-brand">
+                            <span class="footer-brand-title">Netgrid NSoT</span>
+                            <span class="footer-version-tag">v1.2.0</span>
+                            <span class="footer-sep">&bull;</span>
+                            <span class="footer-copyright">&copy; <%= new Date().getFullYear() %> Netgrid Systems</span>
+                        </div>
+                    </div>
+                    <div class="footer-dock-wrap">
+                        <div class="floating-dock-pill">
+                            <span class="dock-indicator-dot"></span>
+                            <span class="dock-meta-item">Host Limit: <strong>3,072 MB</strong></span>
+                            <span class="dock-divider"></span>
+                            <span class="dock-meta-item">DB: <strong>PostgreSQL 15</strong></span>
+                            <span class="dock-divider"></span>
+                            <span class="dock-meta-item">Engine: <strong>RESTful Express</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div><!-- /.app-canvas -->
+    </div><!-- /.app-frame -->
+
+    <!-- Global Client Interactions & Smooth Navigation Feedback -->
+    <div id="netgrid-nav-progress" class="nav-progress-bar" aria-hidden="true"></div>
+    <script>
+        (function() {
+            // Global smooth navigation loader
+            const progressBar = document.getElementById('netgrid-nav-progress');
+            document.querySelectorAll('a[href]:not([target="_blank"]):not([href^="#"]):not([href^="javascript:"])').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const href = link.getAttribute('href');
+                    if (href && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+                        if (progressBar) {
+                            progressBar.classList.add('active');
+                        }
+                    }
+                });
+            });
+
+            // Smooth fade-in on DOM load
+            window.addEventListener('pageshow', () => {
+                if (progressBar) {
+                    progressBar.classList.remove('active');
+                }
+            });
+
+            // Universal modal dismiss on Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const activeModals = document.querySelectorAll('.modal-backdrop.is-active');
+                    activeModals.forEach(m => m.classList.remove('is-active'));
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

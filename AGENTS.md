@@ -17,11 +17,12 @@
 - **Browser Access:** Always route local testing through `https://netgrid.jagratara.com/` (Cloudflared tunnel), never `http://localhost:3000`.
 - **Version Control:** Ensure every functional change or feature update is committed to Git immediately (`git add .` && `git commit -m "..."`).
 
+
 ## UI and Design Rules (Anti-Vibecoding Constraints)
-- **Spacing & Grid:** Enforce a strict 4-point or 8-point spacing rhythm for all margins, padding, and gaps. Zero random spacing values.
-- **Typography:** Follow existing heading font and body font. Define a strict size/line-height scale.
-- **Color & Styling:** Stick to the existing coral, minimal, purposeful color palette. NO sparkles, random emojis, unnecessary purple gradients, or neon effects.
-- **Consistency:** All interactive elements MUST share exact border-radius, shadow styles, and padding logic. Do not mix component styles.
-- **Interactions:** Hover effects and animations must be subtle, predictable, and tied to user intent. Ensure all functional states (loading, active, disabled) are visually distinct.
-- **State Management:** All async actions must have visual loading states (spinners or skeletons). Never load heavy relational data instantly without a transition.
-- **Completeness:** Output production-ready markup. Include page titles, meta descriptions, correct footers, functional links, and flawless mobile responsiveness. No placeholder text.
+- **Spacing & Grid:** Enforce a strict rhythm. Maintain high data density for tables, but allow generous padding for layout containers.
+- **Typography:** Use a modern, rounded sans-serif font system. 
+- **Color & Styling:** Adopt a medical/dashboard aesthetic: use beige/off-white backgrounds, dark charcoal floating containers, and neon yellow accents. Completely remove the previous coral palette.
+- **Consistency:** Use pill-shaped (fully rounded) buttons and heavy border-radius (e.g., 16px - 24px) for cards and layout containers.
+- **Interactions & Navigation:** Implement smooth client-side page transitions (via Swup.js or HTMX) to slide between EJS views without hard browser reloads.
+- **State Management:** All async actions must have visual loading states (spinners or skeletons).
+- **Completeness:** Output production-ready markup.

@@ -25,5 +25,25 @@
 - `POST /devices/:id/edit`: Update device parameters with strict role validation.
 - `POST /devices/:id/delete`: Delete hardware node with cascading credential cleanup and IP unbinding.
 
+## UI/UX Redesign (Medical Dashboard Aesthetic)
+- Complete rewrite of `/opt/netgrid/public/css/style.css`, `header.ejs`, `navbar.ejs`, and `footer.ejs`.
+- Color system extracted from reference dashboard:
+  - Medical stone beige canvas (`#E6E4DD`) with dark slate workstation frame (`#2B2E30`)
+  - Dark charcoal floating containers, action panels, and docks (`#1E2123`)
+  - Neon yellow active indicators, highlights, and pulsing telemetry dots (`#DFFF28`)
+  - Crisp high-contrast text (`#17191A`), muted slate labels (`#686C6A`), and clean dividers (`#DCD8CB`)
+  - Former coral palette completely removed across all stylesheets and views.
+- Geometry & Radii:
+  - Extreme layout canvas border radius (`36px`)
+  - Layout containers, cards, and modal dialogs (`24px` - `28px`)
+  - All navigation items, action buttons, search inputs, and status badges strictly pill-shaped (`9999px`)
+- Navigation Architecture:
+  - Floating pill-shaped header with console circle action button and bold module title
+  - Pill navigation cluster with icons and neon active state indicators
+  - Dark charcoal telemetry dock displaying live PostgreSQL 15 status and 3,072 MB RAM constraint
+- Data Density:
+  - `/ipam`, `/vlans`, and `/devices` data tables retain rigorous tabular density and high legibility with monospace values.
+  - Subnet Space Map matrix updated with dark charcoal allocated cells and glowing neon yellow hovers.
+
 ## Current Task
-- Completed Device Registry Module (`/devices`). Next: Build Credentials Vault module (`/credentials`) or Topology Graph (`/topology`).
+- Completed UI redesign to medical dashboard aesthetic. Next: Build Credentials Vault module (`/credentials`) or Topology Graph (`/topology`).
