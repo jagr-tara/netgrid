@@ -374,9 +374,12 @@
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        // Add Modal Elements
+    function initDevicesPage() {
         const addModal = document.getElementById('add-device-modal');
+        if (!addModal) return;
+        if (addModal.dataset.initialized === 'true') return;
+        addModal.dataset.initialized = 'true';
+
         const openAddBtn = document.getElementById('open-device-modal-btn');
         const tableAddBtn = document.getElementById('table-add-device-btn');
         const emptyAddBtn = document.getElementById('empty-add-device-btn');
@@ -681,7 +684,13 @@
                 }
             });
         });
-    });
+    }
+    window.initDevicesPage = initDevicesPage;
+    if (document.readyState === 'loading') {
+        document.addEventListener("DOMContentLoaded", initDevicesPage);
+    } else {
+        initDevicesPage();
+    }
 </script>
 
 <%- include('partials/footer') %>

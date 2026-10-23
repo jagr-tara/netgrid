@@ -255,8 +255,12 @@
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
+    function initIpamPage() {
         const modal = document.getElementById('subnet-modal');
+        if (!modal) return;
+        if (modal.dataset.initialized === 'true') return;
+        modal.dataset.initialized = 'true';
+
         const openBtn = document.getElementById('open-subnet-modal-btn');
         const emptyAddBtn = document.getElementById('empty-add-subnet-btn');
         const closeXBtn = document.getElementById('close-modal-x');
@@ -445,7 +449,13 @@
                 }
             });
         });
-    });
+    }
+    window.initIpamPage = initIpamPage;
+    if (document.readyState === 'loading') {
+        document.addEventListener("DOMContentLoaded", initIpamPage);
+    } else {
+        initIpamPage();
+    }
 </script>
 
 <%- include('partials/footer') %>

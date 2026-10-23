@@ -334,9 +334,12 @@
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        // Add Modal Elements
+    function initVlansPage() {
         const addModal = document.getElementById('add-vlan-modal');
+        if (!addModal) return;
+        if (addModal.dataset.initialized === 'true') return;
+        addModal.dataset.initialized = 'true';
+
         const openAddBtn = document.getElementById('open-vlan-modal-btn');
         const tableAddBtn = document.getElementById('table-add-vlan-btn');
         const emptyAddBtn = document.getElementById('empty-add-vlan-btn');
@@ -607,7 +610,13 @@
                 });
             });
         }
-    });
+    }
+    window.initVlansPage = initVlansPage;
+    if (document.readyState === 'loading') {
+        document.addEventListener("DOMContentLoaded", initVlansPage);
+    } else {
+        initVlansPage();
+    }
 </script>
 
 <%- include('partials/footer') %>

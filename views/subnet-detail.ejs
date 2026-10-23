@@ -363,8 +363,13 @@
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
+    function initSubnetDetailPage() {
         const modal = document.getElementById('assign-ip-modal');
+        const grid = document.getElementById('space-map-grid');
+        if (!modal && !grid) return;
+        if (modal && modal.dataset.initialized === 'true') return;
+        if (modal) modal.dataset.initialized = 'true';
+
         const openBtn = document.getElementById('open-assign-modal-btn');
         const tableAssignBtn = document.getElementById('table-assign-ip-btn');
         const emptyAssignBtn = document.getElementById('empty-assign-ip-btn');
@@ -610,7 +615,13 @@
                 }
             });
         });
-    });
+    }
+    window.initSubnetDetailPage = initSubnetDetailPage;
+    if (document.readyState === 'loading') {
+        document.addEventListener("DOMContentLoaded", initSubnetDetailPage);
+    } else {
+        initSubnetDetailPage();
+    }
 </script>
 
 <%- include('partials/footer') %>

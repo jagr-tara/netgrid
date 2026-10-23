@@ -45,5 +45,17 @@
   - `/ipam`, `/vlans`, and `/devices` data tables retain rigorous tabular density and high legibility with monospace values.
   - Subnet Space Map matrix updated with dark charcoal allocated cells and glowing neon yellow hovers.
 
+## Client-Side Sliding Page Transitions (Swup.js)
+- Transition Engine: Local `swup.umd.js` (v4.10.0) and `@swup/scripts-plugin` (v2.1.0) bundled into `/public/js/`.
+- Container Layout: `#swup` with `.transition-slide` wrapping page content, modals, and dynamic scripts between navbar and footer.
+- Animation Logic:
+  - `html.is-animating.is-leaving .transition-slide`: Outgoing view fades out and slides up (`-8px`) over 220ms.
+  - `html.is-animating.is-rendering .transition-slide`: Incoming view enters from slightly lower position (`+10px`) and slides into place.
+  - Top neon progress bar (`#netgrid-nav-progress`) illuminates during client fetch and transitions.
+- Idempotent Re-mount Architecture:
+  - Each module exports dedicated initialization functions (`initDashboardPage`, `initIpamPage`, `initVlansPage`, `initDevicesPage`, `initSubnetDetailPage`) with `dataset.initialized` guards.
+  - Swup hooks (`page:view` and `content:replace`) trigger `remountActivePageScripts()` to restore Space Map hovers, modal event listeners, and dynamic dropdown fetching.
+  - Header navigation active pill states and module scope tags dynamically sync on route change.
+
 ## Current Task
-- Completed UI redesign to medical dashboard aesthetic. Next: Build Credentials Vault module (`/credentials`) or Topology Graph (`/topology`).
+- Completed Swup.js sliding page transitions and script re-mounting. Next: Build Credentials Vault module (`/credentials`) or Topology Graph (`/topology`).

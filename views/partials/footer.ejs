@@ -1,3 +1,4 @@
+            </div><!-- /#swup -->
             <footer class="app-footer">
                 <div class="footer-container">
                     <div class="footer-left">
@@ -23,35 +24,120 @@
         </div><!-- /.app-canvas -->
     </div><!-- /.app-frame -->
 
-    <!-- Global Client Interactions & Smooth Navigation Feedback -->
+    <!-- Navigation Progress Indicator -->
     <div id="netgrid-nav-progress" class="nav-progress-bar" aria-hidden="true"></div>
+
+    <!-- Swup.js Transition Engine & Scripts Plugin -->
+    <script src="/js/swup.umd.js"></script>
+    <script src="/js/swup-scripts-plugin.umd.js"></script>
     <script>
         (function() {
-            // Global smooth navigation loader
             const progressBar = document.getElementById('netgrid-nav-progress');
-            document.querySelectorAll('a[href]:not([target="_blank"]):not([href^="#"]):not([href^="javascript:"])').forEach(link => {
-                link.addEventListener('click', (e) => {
-                    const href = link.getAttribute('href');
-                    if (href && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
-                        if (progressBar) {
-                            progressBar.classList.add('active');
-                        }
+
+            // Central remount dispatcher for page-specific dynamic logic
+            function remountActivePageScripts() {
+                // Dashboard Time
+                if (document.getElementById('local-time') && typeof window.initDashboardPage === 'function') {
+                    try { window.initDashboardPage(); } catch (e) { console.error('Dashboard init error:', e); }
+                }
+                // IPAM Subnets & Modal
+                if (document.getElementById('subnet-modal') && typeof window.initIpamPage === 'function') {
+                    try { window.initIpamPage(); } catch (e) { console.error('IPAM init error:', e); }
+                }
+                // VLANs Table & Modals
+                if (document.getElementById('add-vlan-modal') && typeof window.initVlansPage === 'function') {
+                    try { window.initVlansPage(); } catch (e) { console.error('VLANs init error:', e); }
+                }
+                // Devices Hardware & Modals
+                if (document.getElementById('add-device-modal') && typeof window.initDevicesPage === 'function') {
+                    try { window.initDevicesPage(); } catch (e) { console.error('Devices init error:', e); }
+                }
+                // Subnet Detail Space Map & Assign Modal
+                if ((document.getElementById('space-map-grid') || document.getElementById('assign-ip-modal')) && typeof window.initSubnetDetailPage === 'function') {
+                    try { window.initSubnetDetailPage(); } catch (e) { console.error('Subnet detail init error:', e); }
+                }
+            }
+            window.remountActivePageScripts = remountActivePageScripts;
+
+            // Synchronize floating navbar active indicators on client transition
+            function updateActiveNav() {
+                const currentPath = window.location.pathname;
+                document.querySelectorAll('.floating-pill-list .nav-pill').forEach(pill => {
+                    const href = pill.getAttribute('href');
+                    const isActive = (href === '/' && currentPath === '/') || (href !== '/' && currentPath.startsWith(href));
+                    pill.classList.toggle('active', isActive);
+
+                    const existingDot = pill.querySelector('.neon-active-dot');
+                    if (isActive && !existingDot) {
+                        const dot = document.createElement('span');
+                        dot.className = 'neon-active-dot';
+                        dot.setAttribute('aria-hidden', 'true');
+                        pill.appendChild(dot);
+                    } else if (!isActive && existingDot) {
+                        existingDot.remove();
                     }
                 });
-            });
 
-            // Smooth fade-in on DOM load
-            window.addEventListener('pageshow', () => {
-                if (progressBar) {
-                    progressBar.classList.remove('active');
+                const scopePill = document.querySelector('.header-scope-pill');
+                if (scopePill) {
+                    scopePill.textContent = currentPath === '/' ? 'CONSOLE' : currentPath.split('/')[1].toUpperCase();
                 }
-            });
+            }
+
+            // Initialize Swup Engine
+            if (typeof window.Swup !== 'undefined') {
+                const plugins = [];
+                if (typeof window.SwupScriptsPlugin !== 'undefined') {
+                    plugins.push(new window.SwupScriptsPlugin({
+                        head: false,
+                        body: true,
+                        optin: false
+                    }));
+                }
+
+                const swup = new window.Swup({
+                    containers: ['#swup'],
+                    animationSelector: '[class*="transition-"]',
+                    cache: true,
+                    plugins: plugins,
+                    linkSelector: 'a[href]:not([data-no-swup]):not([target="_blank"]):not([href^="#"]):not([href^="javascript:"])'
+                });
+
+                // Top progress feedback & dismiss open dialogs on navigation
+                swup.hooks.on('visit:start', () => {
+                    if (progressBar) {
+                        progressBar.classList.remove('done');
+                        progressBar.classList.add('active');
+                    }
+                    document.querySelectorAll('.modal-backdrop.is-active').forEach(m => m.classList.remove('is-active'));
+                });
+
+                swup.hooks.on('visit:end', () => {
+                    if (progressBar) {
+                        progressBar.classList.add('done');
+                        setTimeout(() => {
+                            progressBar.classList.remove('active', 'done');
+                        }, 220);
+                    }
+                });
+
+                // Re-mount page scripts & update navbar active state after swap
+                swup.hooks.on('page:view', () => {
+                    updateActiveNav();
+                    remountActivePageScripts();
+                });
+
+                swup.hooks.on('content:replace', () => {
+                    remountActivePageScripts();
+                });
+
+                window.netgridSwup = swup;
+            }
 
             // Universal modal dismiss on Escape key
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
-                    const activeModals = document.querySelectorAll('.modal-backdrop.is-active');
-                    activeModals.forEach(m => m.classList.remove('is-active'));
+                    document.querySelectorAll('.modal-backdrop.is-active').forEach(m => m.classList.remove('is-active'));
                 }
             });
         })();

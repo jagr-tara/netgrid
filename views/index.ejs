@@ -81,7 +81,7 @@
 </main>
 
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
+    function initDashboardPage() {
         const timeEl = document.getElementById('local-time');
         if (timeEl) {
             const utcDate = new Date(timeEl.getAttribute('data-utc'));
@@ -90,7 +90,13 @@
                 timeStyle: 'medium'
             }).format(utcDate);
         }
-    });
+    }
+    window.initDashboardPage = initDashboardPage;
+    if (document.readyState === 'loading') {
+        document.addEventListener("DOMContentLoaded", initDashboardPage);
+    } else {
+        initDashboardPage();
+    }
 </script>
 
 <%- include('partials/footer') %>
