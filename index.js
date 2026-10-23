@@ -18,6 +18,9 @@ app.use('/ipam', ipamRouter);
 const vlansRouter = require('./routes/vlans');
 app.use('/vlans', vlansRouter);
 
+const devicesRouter = require('./routes/devices');
+app.use('/devices', devicesRouter);
+
 app.get('/', async (req, res) => {
   try {
     const result = await db.query('SELECT NOW()');

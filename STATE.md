@@ -19,6 +19,11 @@
 - `POST /vlans`: Create VLAN tag with standard 802.1Q range validation (1 - 4094) and duplicate protection.
 - `POST /vlans/:id/edit`: Edit existing VLAN tag identifier and descriptive name.
 - `POST /vlans/:id/delete`: Delete VLAN tag with safe subnet unbinding.
+- `GET /devices`: Network hardware inventory with SQL LEFT JOIN counts for bound credentials and IP allocations.
+- `GET /devices/api`: Asynchronous JSON endpoint for device querying.
+- `POST /devices`: Register hardware with strict HTML <select> role whitelist constraint and optional management IP.
+- `POST /devices/:id/edit`: Update device parameters with strict role validation.
+- `POST /devices/:id/delete`: Delete hardware node with cascading credential cleanup and IP unbinding.
 
 ## Current Task
-- Completed VLAN Management Module (`/vlans`) and Subnet modal integration. Next: Build Device Registry module (`/devices`).
+- Completed Device Registry Module (`/devices`). Next: Build Credentials Vault module (`/credentials`) or Topology Graph (`/topology`).
