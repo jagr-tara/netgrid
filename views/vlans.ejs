@@ -1,0 +1,613 @@
+<%- include('partials/header') %>
+<%- include('partials/navbar') %>
+
+<main class="page-body">
+    <div class="container">
+        <!-- Breadcrumb & Top Bar -->
+        <div class="page-header">
+            <div>
+                <div class="breadcrumb">
+                    <a href="/">Infrastructure</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span class="breadcrumb-current">VLANs</span>
+                </div>
+                <h1 class="page-title">802.1Q VLAN Inventory</h1>
+                <p class="page-subtitle">Layer-2 broadcast domains, logical network segment identifiers, and subnet mappings.</p>
+            </div>
+            <div class="header-actions">
+                <button type="button" class="btn btn-primary" id="open-vlan-modal-btn">
+                    <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    <span>Add VLAN</span>
+                </button>
+            </div>
+        </div>
+
+        <% if (query && query.success) { %>
+            <div class="alert alert-success" role="alert">
+                <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span>
+                    <% if (query.success === 'created') { %>
+                        VLAN tag successfully declared and committed to the database.
+                    <% } else if (query.success === 'updated') { %>
+                        VLAN tag details successfully updated.
+                    <% } else if (query.success === 'deleted') { %>
+                        VLAN tag successfully removed from inventory.
+                    <% } else { %>
+                        Operation successfully executed.
+                    <% } %>
+                </span>
+            </div>
+        <% } %>
+
+        <% if (query && query.error) { %>
+            <div class="alert alert-danger" role="alert">
+                <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                <span><%= query.error %></span>
+            </div>
+        <% } %>
+
+        <!-- Metrics Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total VLANs</div>
+                <div class="stat-value"><%= vlans.length %></div>
+                <div class="stat-desc">Active layer-2 broadcast domains</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Subnets Mapped</div>
+                <div class="stat-value"><%= vlans.reduce((acc, v) => acc + (v.subnet_count || 0), 0) %></div>
+                <div class="stat-desc">Bound IPAM subnet prefixes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">802.1Q Tag Range</div>
+                <div class="stat-value font-mono-sub">1 &mdash; 4094</div>
+                <div class="stat-desc">IEEE 802.1Q VLAN standard space</div>
+            </div>
+        </div>
+
+        <!-- VLANs Data Table Card -->
+        <div class="card mt-24">
+            <div class="card-header flex-between">
+                <div>
+                    <h2 class="card-title">Configured VLAN Tags</h2>
+                    <p class="card-subtitle">Authoritative 802.1Q segments registered in PostgreSQL <code>vlans</code> relation.</p>
+                </div>
+                <div class="table-actions-group">
+                    <input type="text" id="vlan-filter-input" class="search-input" placeholder="Filter by VLAN ID, name..." aria-label="Filter VLANs">
+                    <button type="button" class="btn btn-primary" id="table-add-vlan-btn">
+                        + Add VLAN
+                    </button>
+                </div>
+            </div>
+
+            <div class="card-body no-padding">
+                <% if (vlans.length === 0) { %>
+                    <div class="empty-state">
+                        <div class="empty-icon-wrap">
+                            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="2" y="2" width="20" height="20" rx="3"></rect>
+                                <line x1="2" y1="8" x2="22" y2="8"></line>
+                                <line x1="2" y1="16" x2="22" y2="16"></line>
+                                <line x1="8" y1="2" x2="8" y2="22"></line>
+                                <line x1="16" y1="2" x2="16" y2="22"></line>
+                            </svg>
+                        </div>
+                        <h3 class="empty-title">No VLANs Configured</h3>
+                        <p class="empty-desc">Your database currently has 0 VLAN records. Declare your first 802.1Q tag to enable subnet layer-2 associations.</p>
+                        <button type="button" class="btn btn-primary mt-16" id="empty-add-vlan-btn">
+                            + Add First VLAN
+                        </button>
+                    </div>
+                <% } else { %>
+                    <div class="table-responsive">
+                        <table class="data-table" id="vlans-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">VLAN Tag</th>
+                                    <th scope="col">VLAN Name / Purpose</th>
+                                    <th scope="col">Associated Subnets</th>
+                                    <th scope="col">802.1Q Scope</th>
+                                    <th scope="col" class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% vlans.forEach(vlan => { %>
+                                    <tr id="vlan-row-<%= vlan.id %>" data-search-target="<%= (vlan.tag + ' ' + vlan.name).toLowerCase() %>">
+                                        <td class="cell-vlan-tag">
+                                            <span class="badge badge-vlan font-mono">
+                                                VLAN <%= vlan.tag %>
+                                            </span>
+                                        </td>
+                                        <td class="cell-vlan-name">
+                                            <span class="font-bold"><%= vlan.name %></span>
+                                        </td>
+                                        <td class="cell-subnets">
+                                            <span class="badge <%= vlan.subnet_count > 0 ? 'badge-info' : 'badge-neutral' %> font-mono">
+                                                <%= vlan.subnet_count %> <%= vlan.subnet_count === 1 ? 'subnet' : 'subnets' %>
+                                            </span>
+                                        </td>
+                                        <td class="cell-scope">
+                                            <span class="text-muted text-sm">
+                                                <% if (vlan.tag === 1) { %>
+                                                    Default / Native (Tag 1)
+                                                <% } else if (vlan.tag >= 2 && vlan.tag <= 1005) { %>
+                                                    Normal Range (2 - 1005)
+                                                <% } else if (vlan.tag >= 1006 && vlan.tag <= 4094) { %>
+                                                    Extended Range (1006 - 4094)
+                                                <% } %>
+                                            </span>
+                                        </td>
+                                        <td class="cell-actions text-right">
+                                            <div class="actions-inline">
+                                                <button 
+                                                    type="button" 
+                                                    class="btn-edit" 
+                                                    data-id="<%= vlan.id %>" 
+                                                    data-tag="<%= vlan.tag %>" 
+                                                    data-name="<%= vlan.name %>"
+                                                    title="Edit VLAN details"
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    class="btn-release" 
+                                                    data-id="<%= vlan.id %>" 
+                                                    data-tag="<%= vlan.tag %>" 
+                                                    data-name="<%= vlan.name %>"
+                                                    title="Delete VLAN"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Add VLAN Modal -->
+<div class="modal-backdrop" id="add-vlan-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="add-vlan-title">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3 class="modal-title" id="add-vlan-title">Add 802.1Q VLAN Tag</h3>
+                    <p class="modal-subtitle">Declare a layer-2 broadcast domain in Netgrid NSoT.</p>
+                </div>
+                <button type="button" class="modal-close-btn" id="close-add-vlan-x" aria-label="Close dialog">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="6" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="add-vlan-form" method="POST" action="/vlans" novalidate>
+                <div class="modal-body">
+                    <!-- Dynamic Alert Inside Modal -->
+                    <div class="alert alert-danger hidden" id="add-vlan-alert" role="alert">
+                        <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                        <span id="add-vlan-alert-text">Error message</span>
+                    </div>
+
+                    <!-- VLAN Tag ID -->
+                    <div class="form-group">
+                        <label for="add-vlan-id" class="form-label">
+                            VLAN ID (Tag) <span class="required-asterisk">*</span>
+                        </label>
+                        <input 
+                            type="number" 
+                            id="add-vlan-id" 
+                            name="vlan_id" 
+                            class="form-control font-mono" 
+                            placeholder="e.g. 10 or 100" 
+                            min="1" 
+                            max="4094" 
+                            required 
+                            autocomplete="off"
+                        >
+                        <p class="form-hint">IEEE 802.1Q numerical identifier (valid range: 1 through 4094).</p>
+                    </div>
+
+                    <!-- VLAN Name -->
+                    <div class="form-group">
+                        <label for="add-vlan-name" class="form-label">
+                            VLAN Name / Purpose <span class="required-asterisk">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="add-vlan-name" 
+                            name="name" 
+                            class="form-control" 
+                            placeholder="e.g. Management, DMZ-Web, Voice, Production" 
+                            maxlength="255" 
+                            required 
+                            autocomplete="off"
+                        >
+                        <p class="form-hint">Descriptive label identifying this broadcast segment.</p>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel-add-vlan-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submit-add-vlan-btn">
+                        <span class="btn-spinner hidden" id="spinner-add-vlan" aria-hidden="true"></span>
+                        <span id="label-add-vlan">Create VLAN</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit VLAN Modal -->
+<div class="modal-backdrop" id="edit-vlan-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="edit-vlan-title">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3 class="modal-title" id="edit-vlan-title">Edit 802.1Q VLAN Tag</h3>
+                    <p class="modal-subtitle">Update layer-2 segment metadata.</p>
+                </div>
+                <button type="button" class="modal-close-btn" id="close-edit-vlan-x" aria-label="Close dialog">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="6" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="edit-vlan-form" method="POST" action="" novalidate>
+                <div class="modal-body">
+                    <!-- Dynamic Alert Inside Modal -->
+                    <div class="alert alert-danger hidden" id="edit-vlan-alert" role="alert">
+                        <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                        <span id="edit-vlan-alert-text">Error message</span>
+                    </div>
+
+                    <!-- Hidden ID input -->
+                    <input type="hidden" id="edit-vlan-id-hidden" name="id">
+
+                    <!-- VLAN Tag ID -->
+                    <div class="form-group">
+                        <label for="edit-vlan-tag" class="form-label">
+                            VLAN ID (Tag) <span class="required-asterisk">*</span>
+                        </label>
+                        <input 
+                            type="number" 
+                            id="edit-vlan-tag" 
+                            name="vlan_id" 
+                            class="form-control font-mono" 
+                            min="1" 
+                            max="4094" 
+                            required 
+                            autocomplete="off"
+                        >
+                        <p class="form-hint">IEEE 802.1Q numerical identifier (1 through 4094).</p>
+                    </div>
+
+                    <!-- VLAN Name -->
+                    <div class="form-group">
+                        <label for="edit-vlan-name" class="form-label">
+                            VLAN Name / Purpose <span class="required-asterisk">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="edit-vlan-name" 
+                            name="name" 
+                            class="form-control" 
+                            maxlength="255" 
+                            required 
+                            autocomplete="off"
+                        >
+                        <p class="form-hint">Descriptive label identifying this broadcast segment.</p>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel-edit-vlan-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submit-edit-vlan-btn">
+                        <span class="btn-spinner hidden" id="spinner-edit-vlan" aria-hidden="true"></span>
+                        <span id="label-edit-vlan">Save Changes</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Add Modal Elements
+        const addModal = document.getElementById('add-vlan-modal');
+        const openAddBtn = document.getElementById('open-vlan-modal-btn');
+        const tableAddBtn = document.getElementById('table-add-vlan-btn');
+        const emptyAddBtn = document.getElementById('empty-add-vlan-btn');
+        const closeAddX = document.getElementById('close-add-vlan-x');
+        const cancelAddBtn = document.getElementById('cancel-add-vlan-btn');
+        const addForm = document.getElementById('add-vlan-form');
+        const addVlanInput = document.getElementById('add-vlan-id');
+        const addNameInput = document.getElementById('add-vlan-name');
+        const addAlertBox = document.getElementById('add-vlan-alert');
+        const addAlertText = document.getElementById('add-vlan-alert-text');
+        const submitAddBtn = document.getElementById('submit-add-vlan-btn');
+        const labelAddBtn = document.getElementById('label-add-vlan');
+        const spinnerAdd = document.getElementById('spinner-add-vlan');
+
+        // Edit Modal Elements
+        const editModal = document.getElementById('edit-vlan-modal');
+        const closeEditX = document.getElementById('close-edit-vlan-x');
+        const cancelEditBtn = document.getElementById('cancel-edit-vlan-btn');
+        const editForm = document.getElementById('edit-vlan-form');
+        const editIdHidden = document.getElementById('edit-vlan-id-hidden');
+        const editTagInput = document.getElementById('edit-vlan-tag');
+        const editNameInput = document.getElementById('edit-vlan-name');
+        const editAlertBox = document.getElementById('edit-vlan-alert');
+        const editAlertText = document.getElementById('edit-vlan-alert-text');
+        const submitEditBtn = document.getElementById('submit-edit-vlan-btn');
+        const labelEditBtn = document.getElementById('label-edit-vlan');
+        const spinnerEdit = document.getElementById('spinner-edit-vlan');
+
+        // Filter Element
+        const filterInput = document.getElementById('vlan-filter-input');
+
+        // Open Add Modal
+        function openAddModal() {
+            addModal.classList.add('is-active');
+            addModal.setAttribute('aria-hidden', 'false');
+            addAlertBox.classList.add('hidden');
+            addForm.reset();
+            setTimeout(() => addVlanInput.focus(), 50);
+        }
+
+        // Close Add Modal
+        function closeAddModal() {
+            addModal.classList.remove('is-active');
+            addModal.setAttribute('aria-hidden', 'true');
+            addAlertBox.classList.add('hidden');
+            submitAddBtn.disabled = false;
+            spinnerAdd.classList.add('hidden');
+            labelAddBtn.textContent = 'Create VLAN';
+        }
+
+        // Open Edit Modal
+        function openEditModal(id, tag, name) {
+            editIdHidden.value = id;
+            editTagInput.value = tag;
+            editNameInput.value = name;
+            editForm.action = '/vlans/' + id + '/edit';
+            editModal.classList.add('is-active');
+            editModal.setAttribute('aria-hidden', 'false');
+            editAlertBox.classList.add('hidden');
+            setTimeout(() => editTagInput.focus(), 50);
+        }
+
+        // Close Edit Modal
+        function closeEditModal() {
+            editModal.classList.remove('is-active');
+            editModal.setAttribute('aria-hidden', 'true');
+            editAlertBox.classList.add('hidden');
+            submitEditBtn.disabled = false;
+            spinnerEdit.classList.add('hidden');
+            labelEditBtn.textContent = 'Save Changes';
+        }
+
+        if (openAddBtn) openAddBtn.addEventListener('click', openAddModal);
+        if (tableAddBtn) tableAddBtn.addEventListener('click', openAddModal);
+        if (emptyAddBtn) emptyAddBtn.addEventListener('click', openAddModal);
+        if (closeAddX) closeAddX.addEventListener('click', closeAddModal);
+        if (cancelAddBtn) cancelAddBtn.addEventListener('click', closeAddModal);
+
+        if (closeEditX) closeEditX.addEventListener('click', closeEditModal);
+        if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeEditModal);
+
+        // Backdrop click handling
+        addModal.addEventListener('click', (e) => {
+            if (e.target === addModal) closeAddModal();
+        });
+
+        editModal.addEventListener('click', (e) => {
+            if (e.target === editModal) closeEditModal();
+        });
+
+        // Escape key handling
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (addModal.classList.contains('is-active')) closeAddModal();
+                if (editModal.classList.contains('is-active')) closeEditModal();
+            }
+        });
+
+        // Add VLAN Form Submission
+        addForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            addAlertBox.classList.add('hidden');
+
+            const tagVal = parseInt(addVlanInput.value, 10);
+            const nameVal = addNameInput.value.trim();
+
+            if (isNaN(tagVal) || tagVal < 1 || tagVal > 4094) {
+                addAlertText.textContent = 'VLAN ID must be an integer between 1 and 4094.';
+                addAlertBox.classList.remove('hidden');
+                addVlanInput.focus();
+                return;
+            }
+
+            if (!nameVal) {
+                addAlertText.textContent = 'VLAN Name is required.';
+                addAlertBox.classList.remove('hidden');
+                addNameInput.focus();
+                return;
+            }
+
+            submitAddBtn.disabled = true;
+            spinnerAdd.classList.remove('hidden');
+            labelAddBtn.textContent = 'Saving...';
+
+            try {
+                const response = await fetch('/vlans', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ vlan_id: tagVal, name: nameVal }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    window.location.href = '/vlans?success=created';
+                } else {
+                    addAlertText.textContent = data.error || 'Failed to create VLAN.';
+                    addAlertBox.classList.remove('hidden');
+                    submitAddBtn.disabled = false;
+                    spinnerAdd.classList.add('hidden');
+                    labelAddBtn.textContent = 'Create VLAN';
+                }
+            } catch (err) {
+                console.error(err);
+                addAlertText.textContent = 'Network error communicating with Netgrid server.';
+                addAlertBox.classList.remove('hidden');
+                submitAddBtn.disabled = false;
+                spinnerAdd.classList.add('hidden');
+                labelAddBtn.textContent = 'Create VLAN';
+            }
+        });
+
+        // Edit VLAN Buttons
+        document.querySelectorAll('.btn-edit').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-id');
+                const tag = btn.getAttribute('data-tag');
+                const name = btn.getAttribute('data-name');
+                openEditModal(id, tag, name);
+            });
+        });
+
+        // Edit VLAN Form Submission
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            editAlertBox.classList.add('hidden');
+
+            const tagVal = parseInt(editTagInput.value, 10);
+            const nameVal = editNameInput.value.trim();
+
+            if (isNaN(tagVal) || tagVal < 1 || tagVal > 4094) {
+                editAlertText.textContent = 'VLAN ID must be an integer between 1 and 4094.';
+                editAlertBox.classList.remove('hidden');
+                editTagInput.focus();
+                return;
+            }
+
+            if (!nameVal) {
+                editAlertText.textContent = 'VLAN Name is required.';
+                editAlertBox.classList.remove('hidden');
+                editNameInput.focus();
+                return;
+            }
+
+            submitEditBtn.disabled = true;
+            spinnerEdit.classList.remove('hidden');
+            labelEditBtn.textContent = 'Saving...';
+
+            try {
+                const response = await fetch(editForm.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ vlan_id: tagVal, name: nameVal }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    window.location.href = '/vlans?success=updated';
+                } else {
+                    editAlertText.textContent = data.error || 'Failed to update VLAN.';
+                    editAlertBox.classList.remove('hidden');
+                    submitEditBtn.disabled = false;
+                    spinnerEdit.classList.add('hidden');
+                    labelEditBtn.textContent = 'Save Changes';
+                }
+            } catch (err) {
+                console.error(err);
+                editAlertText.textContent = 'Network error communicating with Netgrid server.';
+                editAlertBox.classList.remove('hidden');
+                submitEditBtn.disabled = false;
+                spinnerEdit.classList.add('hidden');
+                labelEditBtn.textContent = 'Save Changes';
+            }
+        });
+
+        // Delete VLAN Action
+        document.querySelectorAll('.btn-release').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-id');
+                const tag = btn.getAttribute('data-tag');
+                const name = btn.getAttribute('data-name');
+
+                if (!confirm(`Are you sure you want to delete VLAN ${tag} (${name})? Any bound subnets will become untagged.`)) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/vlans/${id}/delete`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                        },
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        window.location.href = '/vlans?success=deleted';
+                    } else {
+                        alert(data.error || 'Failed to delete VLAN.');
+                    }
+                } catch (err) {
+                    console.error('Delete failed:', err);
+                    alert('Network error communicating with Netgrid server.');
+                }
+            });
+        });
+
+        // Filter Table Rows
+        if (filterInput) {
+            filterInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const rows = document.querySelectorAll('#vlans-table tbody tr');
+                rows.forEach(row => {
+                    const searchTarget = row.getAttribute('data-search-target') || '';
+                    if (searchTarget.includes(term)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
+    });
+</script>
+
+<%- include('partials/footer') %>

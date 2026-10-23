@@ -269,12 +269,37 @@
         const submitLabel = document.getElementById('modal-submit-label');
         const spinner = document.getElementById('modal-spinner');
         const filterInput = document.getElementById('subnet-filter-input');
+        const vlanSelect = document.getElementById('subnet-vlan');
+
+        async function refreshVlanDropdown() {
+            if (!vlanSelect) return;
+            try {
+                const res = await fetch('/vlans/api', { headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                if (data.success && Array.isArray(data.vlans)) {
+                    const currentSelected = vlanSelect.value;
+                    vlanSelect.innerHTML = '<option value="">None (Untagged / Unassigned)</option>';
+                    data.vlans.forEach(v => {
+                        const opt = document.createElement('option');
+                        opt.value = v.id;
+                        opt.textContent = `VLAN ${v.tag} — ${v.name}`;
+                        if (String(v.id) === String(currentSelected)) {
+                            opt.selected = true;
+                        }
+                        vlanSelect.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to dynamically query VLANs:', err);
+            }
+        }
 
         function openModal() {
             modal.classList.add('is-active');
             modal.setAttribute('aria-hidden', 'false');
             hideAlert();
             form.reset();
+            refreshVlanDropdown();
             setTimeout(() => networkInput.focus(), 50);
         }
 

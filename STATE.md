@@ -10,10 +10,15 @@
 
 ## Completed Routes & Views
 - `GET /`: System status and database connection check.
-- `GET /ipam`, `POST /ipam`: Subnet dashboard, CIDR validation, and creation modal.
+- `GET /ipam`, `POST /ipam`: Subnet dashboard, CIDR validation, and creation modal (with dynamic VLAN dropdown integration).
 - `GET /ipam/subnets/:id`: Subnet detail view with interactive 'Space Map' grid and allocated IP table.
 - `POST /ipam/subnets/:id/ips`: IP allocation endpoint with CIDR boundary check, duplicate validation, and device binding.
 - `POST /ipam/subnets/:id/ips/:ipId/delete`: Release IP allocation endpoint.
+- `GET /vlans`: 802.1Q VLAN inventory dashboard, telemetry metrics, and search filter.
+- `GET /vlans/api`: Asynchronous JSON endpoint for dynamic VLAN queries in modal forms.
+- `POST /vlans`: Create VLAN tag with standard 802.1Q range validation (1 - 4094) and duplicate protection.
+- `POST /vlans/:id/edit`: Edit existing VLAN tag identifier and descriptive name.
+- `POST /vlans/:id/delete`: Delete VLAN tag with safe subnet unbinding.
 
 ## Current Task
-- Completed IPAM Subnet Detail View & Space Map. Ready for VLAN management module (`/vlans`) or Device inventory (`/devices`).
+- Completed VLAN Management Module (`/vlans`) and Subnet modal integration. Next: Build Device Registry module (`/devices`).

@@ -15,6 +15,9 @@ app.use(express.json());
 const ipamRouter = require('./routes/ipam');
 app.use('/ipam', ipamRouter);
 
+const vlansRouter = require('./routes/vlans');
+app.use('/vlans', vlansRouter);
+
 app.get('/', async (req, res) => {
   try {
     const result = await db.query('SELECT NOW()');
