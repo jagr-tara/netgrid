@@ -1,0 +1,605 @@
+<%- include('partials/header') %>
+<%- include('partials/navbar') %>
+
+<main class="page-body">
+    <div class="container">
+        <!-- Breadcrumb & Top Bar -->
+        <div class="page-header">
+            <div>
+                <div class="breadcrumb">
+                    <a href="/">Infrastructure</a>
+                    <span class="breadcrumb-separator">/</span>
+                    <span class="breadcrumb-current">Flows</span>
+                </div>
+                <h1 class="page-title">Network Flow Matrix</h1>
+                <p class="page-subtitle">Layer-3 and Layer-4 inter-subnet traffic flow policies, port routing rules, and protocol access matrix.</p>
+            </div>
+            <div class="header-actions">
+                <button type="button" class="btn btn-primary" id="open-flow-modal-btn">
+                    <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    <span>Add Flow Rule</span>
+                </button>
+            </div>
+        </div>
+
+        <% if (query && query.success) { %>
+            <div class="alert alert-success" role="alert">
+                <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span>
+                    <% if (query.success === 'created') { %>
+                        Network flow policy rule recorded in PostgreSQL flow_matrix relation.
+                    <% } else if (query.success === 'deleted') { %>
+                        Flow policy rule dropped from flow matrix.
+                    <% } else { %>
+                        Operation executed successfully.
+                    <% } %>
+                </span>
+            </div>
+        <% } %>
+
+        <% if (query && query.error) { %>
+            <div class="alert alert-danger" role="alert">
+                <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                <span><%= query.error %></span>
+            </div>
+        <% } %>
+
+        <!-- Metrics Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Matrix Rules</div>
+                <div class="stat-value"><%= flows.length %></div>
+                <div class="stat-desc">Active traffic control policies</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">TCP Rules</div>
+                <div class="stat-value"><%= flows.filter(f => f.protocol === 'TCP').length %></div>
+                <div class="stat-desc">Transmission Control Protocol</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">UDP Rules</div>
+                <div class="stat-value"><%= flows.filter(f => f.protocol === 'UDP').length %></div>
+                <div class="stat-desc">User Datagram Protocol</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">ICMP Policies</div>
+                <div class="stat-value"><%= flows.filter(f => f.protocol === 'ICMP').length %></div>
+                <div class="stat-desc">Diagnostic & Echo routing</div>
+            </div>
+        </div>
+
+        <!-- Flow Matrix Data Table Card -->
+        <div class="card mt-24">
+            <div class="card-header flex-between">
+                <div>
+                    <h2 class="card-title">Inter-Subnet Routing & Traffic Rules</h2>
+                    <p class="card-subtitle">Relational mapping resolved via dual SQL LEFT JOINs on <code>subnets</code> relation.</p>
+                </div>
+                <div class="table-actions-group">
+                    <input type="text" id="flow-filter-input" class="search-input" placeholder="Filter by CIDR, port, protocol..." aria-label="Filter flows">
+                    <button type="button" class="btn btn-primary" id="table-add-flow-btn">
+                        + Add Flow Rule
+                    </button>
+                </div>
+            </div>
+
+            <div class="card-body no-padding">
+                <% if (flows.length === 0) { %>
+                    <div class="empty-state">
+                        <div class="empty-icon-wrap">
+                            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <polyline points="16 3 21 3 21 8"></polyline>
+                                <line x1="4" y1="20" x2="21" y2="3"></line>
+                                <polyline points="21 16 21 21 16 21"></polyline>
+                                <line x1="15" y1="15" x2="21" y2="21"></line>
+                                <line x1="4" y1="4" x2="9" y2="9"></line>
+                            </svg>
+                        </div>
+                        <h3 class="empty-title">No flow rules defined</h3>
+                        <p class="empty-desc">Establish layer-3 inter-subnet routing constraints and protocol filters between network boundaries.</p>
+                        <button type="button" class="btn btn-primary" id="empty-add-flow-btn">
+                            Add First Flow Rule
+                        </button>
+                    </div>
+                <% } else { %>
+                    <div class="table-container">
+                        <table class="data-table" id="flows-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Source Subnet</th>
+                                    <th scope="col">Destination Subnet</th>
+                                    <th scope="col">Protocol</th>
+                                    <th scope="col">Target Port</th>
+                                    <th scope="col">Description</th>
+                                    <th scope="col" class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% flows.forEach(flow => { %>
+                                    <tr id="flow-row-<%= flow.id %>" data-search-target="<%= ((flow.source_subnet || '0.0.0.0/0') + ' ' + (flow.destination_subnet || '0.0.0.0/0') + ' ' + flow.protocol + ' ' + flow.target_port + ' ' + (flow.description || '')).toLowerCase() %>">
+                                        <td class="cell-source">
+                                            <div class="device-cell-group">
+                                                <% if (flow.source_subnet) { %>
+                                                    <span class="badge badge-mint font-mono"><%= flow.source_subnet %></span>
+                                                    <% if (flow.source_description) { %>
+                                                        <span class="text-muted text-sm" style="margin-left: 6px;"><%= flow.source_description %></span>
+                                                    <% } %>
+                                                <% } else { %>
+                                                    <span class="badge badge-neutral font-mono">0.0.0.0/0 (Any)</span>
+                                                <% } %>
+                                            </div>
+                                        </td>
+                                        <td class="cell-destination">
+                                            <div class="device-cell-group">
+                                                <% if (flow.destination_subnet) { %>
+                                                    <span class="badge badge-cyan font-mono"><%= flow.destination_subnet %></span>
+                                                    <% if (flow.destination_description) { %>
+                                                        <span class="text-muted text-sm" style="margin-left: 6px;"><%= flow.destination_description %></span>
+                                                    <% } %>
+                                                <% } else { %>
+                                                    <span class="badge badge-neutral font-mono">0.0.0.0/0 (Any)</span>
+                                                <% } %>
+                                            </div>
+                                        </td>
+                                        <td class="cell-protocol">
+                                            <% if (flow.protocol === 'TCP') { %>
+                                                <span class="badge badge-mint font-mono" style="font-weight: 700; font-size: 11.5px;">TCP</span>
+                                            <% } else if (flow.protocol === 'UDP') { %>
+                                                <span class="badge badge-cyan font-mono" style="font-weight: 700; font-size: 11.5px;">UDP</span>
+                                            <% } else { %>
+                                                <span class="badge badge-lavender font-mono" style="font-weight: 700; font-size: 11.5px;">ICMP</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="cell-port">
+                                            <% if (flow.protocol === 'ICMP') { %>
+                                                <span class="badge badge-neutral font-mono"><%= flow.target_port === 0 ? 'Any (ICMP)' : flow.target_port %></span>
+                                            <% } else { %>
+                                                <span class="badge badge-neutral font-mono font-bold" style="color: var(--text-main);"><%= flow.target_port %></span>
+                                                <% if (flow.target_port === 443) { %>
+                                                    <span class="text-muted text-sm" style="margin-left: 4px;">(HTTPS)</span>
+                                                <% } else if (flow.target_port === 80) { %>
+                                                    <span class="text-muted text-sm" style="margin-left: 4px;">(HTTP)</span>
+                                                <% } else if (flow.target_port === 22) { %>
+                                                    <span class="text-muted text-sm" style="margin-left: 4px;">(SSH)</span>
+                                                <% } else if (flow.target_port === 53) { %>
+                                                    <span class="text-muted text-sm" style="margin-left: 4px;">(DNS)</span>
+                                                <% } else if (flow.target_port === 161) { %>
+                                                    <span class="text-muted text-sm" style="margin-left: 4px;">(SNMP)</span>
+                                                <% } %>
+                                            <% } %>
+                                        </td>
+                                        <td class="cell-description">
+                                            <span style="color: var(--text-body); font-size: 13px;">
+                                                <%= flow.description || '<span class="text-muted italic">No policy description</span>' %>
+                                            </span>
+                                        </td>
+                                        <td class="cell-actions text-right">
+                                            <div class="actions-inline">
+                                                <button 
+                                                    type="button" 
+                                                    class="btn-release btn-delete-flow" 
+                                                    data-id="<%= flow.id %>" 
+                                                    data-src="<%= flow.source_subnet || '0.0.0.0/0' %>"
+                                                    data-dst="<%= flow.destination_subnet || '0.0.0.0/0' %>"
+                                                    data-proto="<%= flow.protocol %>"
+                                                    data-port="<%= flow.target_port %>"
+                                                    title="Purge flow rule from matrix"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Add Flow Rule Modal Dialog -->
+<div class="modal-backdrop" id="add-flow-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="add-flow-title">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3 class="modal-title" id="add-flow-title">Create Network Flow Rule</h3>
+                    <p class="modal-subtitle">Configure inter-subnet layer-3/4 traffic rule in flow matrix.</p>
+                </div>
+                <button type="button" class="modal-close-btn" id="close-add-flow-x" aria-label="Close dialog">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="6" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="add-flow-form" method="POST" action="/flows" novalidate>
+                <div class="modal-body">
+                    <div id="add-flow-alert-container"></div>
+
+                    <!-- Source Subnet Dynamic Select Dropdown -->
+                    <div class="form-group">
+                        <label for="flow-source-subnet" class="form-label">
+                            Source Subnet <span class="text-muted" style="font-weight: normal; font-size: 12px;">(Ingress Network)</span>
+                        </label>
+                        <select id="flow-source-subnet" name="source_subnet_id" class="form-select">
+                            <option value="">-- Any Source (0.0.0.0/0) --</option>
+                            <% subnets.forEach(sub => { %>
+                                <option value="<%= sub.id %>">
+                                    <%= sub.network %> <%= sub.description ? `&bull; ${sub.description}` : '' %>
+                                </option>
+                            <% }) %>
+                        </select>
+                        <p class="form-hint">Populated from active PostgreSQL <code>subnets</code> inventory.</p>
+                    </div>
+
+                    <!-- Destination Subnet Dynamic Select Dropdown -->
+                    <div class="form-group">
+                        <label for="flow-dest-subnet" class="form-label">
+                            Destination Subnet <span class="text-muted" style="font-weight: normal; font-size: 12px;">(Egress Network)</span>
+                        </label>
+                        <select id="flow-dest-subnet" name="destination_subnet_id" class="form-select">
+                            <option value="">-- Any Destination (0.0.0.0/0) --</option>
+                            <% subnets.forEach(sub => { %>
+                                <option value="<%= sub.id %>">
+                                    <%= sub.network %> <%= sub.description ? `&bull; ${sub.description}` : '' %>
+                                </option>
+                            <% }) %>
+                        </select>
+                        <p class="form-hint">Populated from active PostgreSQL <code>subnets</code> inventory.</p>
+                    </div>
+
+                    <!-- Protocol Restricted Hardcoded Dropdown (TCP, UDP, ICMP) -->
+                    <div class="form-group">
+                        <label for="flow-protocol" class="form-label">
+                            Protocol <span class="required-mark">*</span>
+                        </label>
+                        <select id="flow-protocol" name="protocol" class="form-select" required>
+                            <option value="TCP" selected>TCP</option>
+                            <option value="UDP">UDP</option>
+                            <option value="ICMP">ICMP</option>
+                        </select>
+                        <p class="form-hint">Strictly restricted to standard core transport protocols.</p>
+                    </div>
+
+                    <!-- Target Port Field -->
+                    <div class="form-group" id="flow-port-group">
+                        <label for="flow-port" class="form-label">
+                            Target Port <span class="required-mark" id="port-required-mark">*</span>
+                        </label>
+                        <input 
+                            type="number" 
+                            id="flow-port" 
+                            name="target_port" 
+                            class="form-input font-mono" 
+                            placeholder="e.g. 443" 
+                            min="1" 
+                            max="65535" 
+                            required 
+                            autocomplete="off"
+                        >
+                        <div class="form-error-feedback" id="flow-port-error"></div>
+                        <p class="form-hint" id="flow-port-hint">Valid destination port number (1 - 65535). For ICMP, defaults to 0 (Any).</p>
+                    </div>
+
+                    <!-- Description Field -->
+                    <div class="form-group">
+                        <label for="flow-description" class="form-label">
+                            Policy Description
+                        </label>
+                        <input 
+                            type="text" 
+                            id="flow-description" 
+                            name="description" 
+                            class="form-input" 
+                            placeholder="e.g. Production Web Ingress to Core App Cluster" 
+                            autocomplete="off"
+                        >
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel-add-flow-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submit-add-flow-btn">
+                        <span>Create Flow Rule</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal Dialog -->
+<div class="modal-backdrop" id="delete-flow-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="delete-flow-title">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3 class="modal-title" id="delete-flow-title">Delete Flow Rule</h3>
+                    <p class="modal-subtitle">Remove traffic routing policy from matrix.</p>
+                </div>
+                <button type="button" class="modal-close-btn" id="close-delete-flow-x" aria-label="Close dialog">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="6" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <p style="font-size: 13.5px; color: var(--text-body); line-height: 1.5; margin: 0 0 12px;">
+                    Are you sure you want to permanently delete the flow rule:
+                </p>
+                <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 12px; margin-bottom: 14px; font-size: 12.5px;">
+                    <div style="margin-bottom: 4px;"><strong>Source:</strong> <span id="delete-src" class="font-mono"></span></div>
+                    <div style="margin-bottom: 4px;"><strong>Destination:</strong> <span id="delete-dst" class="font-mono"></span></div>
+                    <div><strong>Protocol & Port:</strong> <span id="delete-proto" class="font-mono"></span> : <span id="delete-port" class="font-mono"></span></div>
+                </div>
+                <div class="alert alert-danger" style="margin: 0;">
+                    <span>This action will immediately remove the flow policy from PostgreSQL.</span>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancel-delete-flow-btn">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete-flow-btn">
+                    <span>Delete Rule</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /**
+     * Netgrid Network Flow Matrix Client Engine
+     * Idempotent initialization tied into standard DOM load and Swup lifecycle hooks.
+     */
+    function initFlowsPage() {
+        const addModal = document.getElementById('add-flow-modal');
+        const deleteModal = document.getElementById('delete-flow-modal');
+        if (!addModal) return;
+
+        // Open Add Modal Buttons
+        const openBtns = [
+            document.getElementById('open-flow-modal-btn'),
+            document.getElementById('table-add-flow-btn'),
+            document.getElementById('empty-add-flow-btn'),
+        ].filter(Boolean);
+
+        openBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const form = document.getElementById('add-flow-form');
+                if (form) form.reset();
+                const alertContainer = document.getElementById('add-flow-alert-container');
+                if (alertContainer) alertContainer.innerHTML = '';
+                
+                // Reset protocol dependent port state
+                handleProtocolChange();
+
+                addModal.classList.add('is-active');
+            });
+        });
+
+        // Close Add Modal Buttons
+        const closeAddBtns = [
+            document.getElementById('close-add-flow-x'),
+            document.getElementById('cancel-add-flow-btn'),
+        ].filter(Boolean);
+
+        closeAddBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                addModal.classList.remove('is-active');
+            });
+        });
+
+        // Protocol Dropdown Change Handler (adjusts port required & hints)
+        const protocolSelect = document.getElementById('flow-protocol');
+        const portInput = document.getElementById('flow-port');
+        const portHint = document.getElementById('flow-port-hint');
+        const portReqMark = document.getElementById('port-required-mark');
+
+        function handleProtocolChange() {
+            if (!protocolSelect || !portInput) return;
+            const proto = protocolSelect.value;
+            if (proto === 'ICMP') {
+                portInput.value = '';
+                portInput.placeholder = '0 (Any / Echo)';
+                portInput.removeAttribute('required');
+                if (portReqMark) portReqMark.style.display = 'none';
+                if (portHint) portHint.textContent = 'ICMP does not use port numbers. Defaults to 0 (Echo/Any).';
+            } else {
+                portInput.placeholder = 'e.g. 443';
+                portInput.setAttribute('required', 'required');
+                if (portReqMark) portReqMark.style.display = 'inline';
+                if (portHint) portHint.textContent = `Valid destination port number (1 - 65535) for ${proto}.`;
+            }
+        }
+
+        if (protocolSelect) {
+            protocolSelect.addEventListener('change', handleProtocolChange);
+        }
+
+        // Add Flow Form Submission with Validation
+        const addForm = document.getElementById('add-flow-form');
+        if (addForm) {
+            addForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const submitBtn = document.getElementById('submit-add-flow-btn');
+                const portErr = document.getElementById('flow-port-error');
+
+                const proto = protocolSelect ? protocolSelect.value : 'TCP';
+                let hasError = false;
+
+                if (proto !== 'ICMP') {
+                    const portVal = portInput ? portInput.value.trim() : '';
+                    const parsed = parseInt(portVal, 10);
+                    if (!portVal || isNaN(parsed) || parsed < 1 || parsed > 65535) {
+                        if (portInput) portInput.classList.add('is-invalid');
+                        if (portErr) portErr.textContent = 'A valid target port between 1 and 65535 is required.';
+                        hasError = true;
+                    } else {
+                        if (portInput) portInput.classList.remove('is-invalid');
+                        if (portErr) portErr.textContent = '';
+                    }
+                }
+
+                if (hasError) return;
+
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span>Saving Rule...</span>';
+                }
+
+                try {
+                    const formData = new FormData(addForm);
+                    const payload = {
+                        source_subnet_id: formData.get('source_subnet_id'),
+                        destination_subnet_id: formData.get('destination_subnet_id'),
+                        protocol: formData.get('protocol'),
+                        target_port: formData.get('target_port'),
+                        description: formData.get('description'),
+                    };
+
+                    const response = await fetch('/flows', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify(payload),
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        window.location.href = '/flows?success=created';
+                    } else {
+                        const alertContainer = document.getElementById('add-flow-alert-container');
+                        if (alertContainer) {
+                            alertContainer.innerHTML = `
+                                <div class="alert alert-danger" style="margin-bottom: 16px;">
+                                    <span>${data.error || 'Failed to record flow rule.'}</span>
+                                </div>
+                            `;
+                        }
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<span>Create Flow Rule</span>';
+                        }
+                    }
+                } catch (err) {
+                    console.error('Flow creation network error:', err);
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<span>Create Flow Rule</span>';
+                    }
+                }
+            });
+        }
+
+        // Delete Flow Rule Flow
+        let activeDeleteId = null;
+        document.querySelectorAll('.btn-delete-flow').forEach(btn => {
+            btn.addEventListener('click', () => {
+                activeDeleteId = btn.getAttribute('data-id');
+                const srcEl = document.getElementById('delete-src');
+                const dstEl = document.getElementById('delete-dst');
+                const protoEl = document.getElementById('delete-proto');
+                const portEl = document.getElementById('delete-port');
+
+                if (srcEl) srcEl.textContent = btn.getAttribute('data-src') || '0.0.0.0/0';
+                if (dstEl) dstEl.textContent = btn.getAttribute('data-dst') || '0.0.0.0/0';
+                if (protoEl) protoEl.textContent = btn.getAttribute('data-proto') || 'TCP';
+                if (portEl) portEl.textContent = btn.getAttribute('data-port') || '0';
+
+                if (deleteModal) deleteModal.classList.add('is-active');
+            });
+        });
+
+        const closeDeleteBtns = [
+            document.getElementById('close-delete-flow-x'),
+            document.getElementById('cancel-delete-flow-btn'),
+        ].filter(Boolean);
+
+        closeDeleteBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (deleteModal) deleteModal.classList.remove('is-active');
+                activeDeleteId = null;
+            });
+        });
+
+        const confirmDeleteBtn = document.getElementById('confirm-delete-flow-btn');
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener('click', async () => {
+                if (!activeDeleteId) return;
+
+                confirmDeleteBtn.disabled = true;
+                confirmDeleteBtn.innerHTML = '<span>Deleting...</span>';
+
+                try {
+                    const response = await fetch(`/flows/${activeDeleteId}/delete`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                        },
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        window.location.href = '/flows?success=deleted';
+                    } else {
+                        alert(data.error || 'Failed to delete flow rule.');
+                        confirmDeleteBtn.disabled = false;
+                        confirmDeleteBtn.innerHTML = '<span>Delete Rule</span>';
+                    }
+                } catch (err) {
+                    console.error('Delete request failed:', err);
+                    alert('Network error communicating with Netgrid server.');
+                    confirmDeleteBtn.disabled = false;
+                    confirmDeleteBtn.innerHTML = '<span>Delete Rule</span>';
+                }
+            });
+        }
+
+        // Live Table Search Filter
+        const filterInput = document.getElementById('flow-filter-input');
+        if (filterInput) {
+            filterInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const rows = document.querySelectorAll('#flows-table tbody tr');
+                rows.forEach(row => {
+                    const searchTarget = row.getAttribute('data-search-target') || '';
+                    if (searchTarget.includes(term)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
+    }
+
+    // Export globally for Swup lifecycle remount hook
+    window.initFlowsPage = initFlowsPage;
+
+    // Direct navigation invocation
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initFlowsPage);
+    } else {
+        initFlowsPage();
+    }
+</script>
+
+<%- include('partials/footer') %>

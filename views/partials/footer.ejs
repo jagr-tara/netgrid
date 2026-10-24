@@ -68,6 +68,10 @@
                 if (document.getElementById('add-credential-modal') && typeof window.initCredentialsPage === 'function') {
                     try { window.initCredentialsPage(); } catch (e) { console.error('Credentials init error:', e); }
                 }
+                // Network Flow Matrix Table & Modal
+                if (document.getElementById('add-flow-modal') && typeof window.initFlowsPage === 'function') {
+                    try { window.initFlowsPage(); } catch (e) { console.error('Flows init error:', e); }
+                }
             }
             window.remountActivePageScripts = remountActivePageScripts;
 
