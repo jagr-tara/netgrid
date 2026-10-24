@@ -63,6 +63,14 @@
   - Idempotent `initTopologyPage()` function integrated into `remountActivePageScripts()` tied to Swup `content:replace` and `page:view` hooks in `footer.ejs`.
   - Idempotent `initCredentialsPage()` function integrated into `remountActivePageScripts()` handling dynamic device binding modals, table search filters, and zero-exposure copy actions.
   - Idempotent `initFlowsPage()` function integrated into `remountActivePageScripts()` handling dynamic subnet selection, protocol state switching, and live table filtering.
+  - Teardown safety: Canvas network instances explicitly destroyed on Swup `visit:start` to eliminate memory leaks during rapid navigation.
+  - Universal modal interactions: Dismissal enabled on backdrop click and Escape key press globally across all modules.
 
-## Current Task
-- All core infrastructure modules complete: IPAM, VLANs, Device Registry, Topology Graph, Credentials Vault, and Network Flow Matrix. Host RAM: 1,333 MB / 3,072 MB. Git main synchronized.
+## Relational Audit & Validation Status
+- **Relational Stress Test**: Injected full dependency chain (VLAN -> Subnet -> Device -> IP Assignment -> Bound Credential -> Flow Matrix Rule). All foreign keys validated and queryable.
+- **Cascade Deletion Audit**:
+  - Deleted root Device: Successfully triggered PostgreSQL `ON DELETE CASCADE` on `credentials` and `ON DELETE SET NULL` on `ip_addresses` (`device_id = NULL`).
+  - Deleted root VLAN: Successfully triggered PostgreSQL `ON DELETE SET NULL` on `subnets` (`vlan_id = NULL`). Zero server errors or unhandled exceptions.
+- **Lifecycle & Swup Audit**: Verified client-side remounting across all 7 routes (`/`, `/ipam`, `/vlans`, `/devices`, `/topology`, `/credentials`, `/flows`). Memory stable under rapid navigation with automatic canvas teardown.
+- **Theme Polish**: Pixel-perfect alignment of modal backdrops, table padding, search input focus states, and navbar indicators in the Soft Light Dashboard theme.
+- **Current State**: Host RAM at 1,364 MB / 3,072 MB (44%), PM2 process at 63.7 MB. All core infrastructure modules production-ready.
