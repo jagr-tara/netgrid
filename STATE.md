@@ -59,10 +59,11 @@
   - `/ipam`, `/vlans`, `/devices`, `/credentials`, and `/flows` retain high-density tabular presentation with compact padding and monospace values
   - Subnet Space Map styled with stark black allocated blocks (`#0F1115`) on clean panels with mint hover effects
 - Swup.js Transitions & Dynamic Engines:
-  - `#swup` transition container and sliding animations (`200ms` cubic-bezier) preserved and fully functional.
-  - Idempotent `initTopologyPage()` function integrated into `remountActivePageScripts()` tied to Swup `content:replace` and `page:view` hooks in `footer.ejs`.
-  - Idempotent `initCredentialsPage()` function integrated into `remountActivePageScripts()` handling dynamic device binding modals, table search filters, and zero-exposure copy actions.
-  - Idempotent `initFlowsPage()` function integrated into `remountActivePageScripts()` handling dynamic subnet selection, protocol state switching, and live table filtering.
+  - Streamlined Swup transition engine: eliminated vertical translate jumps (`translateY(-6px)` / `translateY(8px)`) which caused font subpixel rasterization jitter and card layout jumping; updated to a clean, silky 140ms opacity cross-fade.
+  - Resolved multiple Swup instantiations and script re-execution: added `data-swup-ignore-script` to all footer libraries (`vis-network`, `swup`, `swup-scripts-plugin`, and main footer script) to prevent duplicate execution during navigation.
+  - Removed redundant `vis-network` CDN loads and `document.write` fallback that caused document stream interruptions and white flashes.
+  - Synchronized navbar active indicators immediately on `visit:start` with target path, eliminating the delay and sudden snap on transition end.
+  - Idempotency guards (`dataset.initialized`) enforced across all pages (`ipam`, `vlans`, `devices`, `credentials`, `flows`, `subnet-detail`) to guarantee zero duplicate event listener attachments.
   - Teardown safety: Canvas network instances explicitly destroyed on Swup `visit:start` to eliminate memory leaks during rapid navigation.
   - Universal modal interactions: Dismissal enabled on backdrop click and Escape key press globally across all modules.
 

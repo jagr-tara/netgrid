@@ -27,15 +27,17 @@
     <!-- Navigation Progress Indicator -->
     <div id="netgrid-nav-progress" class="nav-progress-bar" aria-hidden="true"></div>
 
-    <!-- vis-network Canvas Graph Engine (CDN with local fallback) -->
-    <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <script>if (typeof window.vis === 'undefined') document.write('<script src="/js/vis-network.min.js"><\/script>');</script>
+    <!-- vis-network Canvas Graph Engine (Local cached engine) -->
+    <script data-swup-ignore-script src="/js/vis-network.min.js"></script>
 
     <!-- Swup.js Transition Engine & Scripts Plugin -->
-    <script src="/js/swup.umd.js"></script>
-    <script src="/js/swup-scripts-plugin.umd.js"></script>
-    <script>
+    <script data-swup-ignore-script src="/js/swup.umd.js"></script>
+    <script data-swup-ignore-script src="/js/swup-scripts-plugin.umd.js"></script>
+    <script data-swup-ignore-script>
         (function() {
+            if (window.__netgridFooterInit) return;
+            window.__netgridFooterInit = true;
+
             const progressBar = document.getElementById('netgrid-nav-progress');
 
             // Central remount dispatcher for page-specific dynamic logic
@@ -76,8 +78,8 @@
             window.remountActivePageScripts = remountActivePageScripts;
 
             // Synchronize floating navbar active indicators on client transition
-            function updateActiveNav() {
-                const currentPath = window.location.pathname;
+            function updateActiveNav(targetPath) {
+                const currentPath = targetPath || window.location.pathname;
                 document.querySelectorAll('.floating-pill-list .nav-pill').forEach(pill => {
                     const href = pill.getAttribute('href');
                     const isActive = (href === '/' && currentPath === '/') || (href !== '/' && currentPath.startsWith(href));
@@ -91,7 +93,7 @@
             }
 
             // Initialize Swup Engine
-            if (typeof window.Swup !== 'undefined') {
+            if (typeof window.Swup !== 'undefined' && !window.netgridSwup) {
                 const plugins = [];
                 if (typeof window.SwupScriptsPlugin !== 'undefined') {
                     plugins.push(new window.SwupScriptsPlugin({
@@ -109,8 +111,11 @@
                     linkSelector: 'a[href]:not([data-no-swup]):not([target="_blank"]):not([href^="#"]):not([href^="javascript:"])'
                 });
 
-                // Top progress feedback & dismiss open dialogs on navigation
-                swup.hooks.on('visit:start', () => {
+                // Immediate active navbar update and progress feedback on navigation click
+                swup.hooks.on('visit:start', (visit) => {
+                    if (visit && visit.to && visit.to.url) {
+                        updateActiveNav(visit.to.url);
+                    }
                     if (progressBar) {
                         progressBar.classList.remove('done');
                         progressBar.classList.add('active');
@@ -137,14 +142,14 @@
                     }
                 });
 
-                // Re-mount page scripts & update navbar active state after swap
-                swup.hooks.on('page:view', () => {
-                    updateActiveNav();
+                // Re-mount page scripts on DOM content replace (single invocation per transition)
+                swup.hooks.on('content:replace', () => {
                     remountActivePageScripts();
                 });
 
-                swup.hooks.on('content:replace', () => {
-                    remountActivePageScripts();
+                // Final sync of active navigation state on view completion
+                swup.hooks.on('page:view', () => {
+                    updateActiveNav();
                 });
 
                 window.netgridSwup = swup;
